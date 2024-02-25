@@ -13,10 +13,6 @@ namespace MSCKalman {
 class MSCK_Filter {
  public:
 
-  struct Quaternion {
-   double w, x, y, z;
-  };
-
   struct EulerAngles {
    double roll, pitch, yaw;
   };
@@ -25,7 +21,42 @@ class MSCK_Filter {
   MSCK_Filter()
       : MSCK_Filter(ros::NodeHandle(), ros::NodeHandle("~")) {}
   ~MSCK_Filter() {}
+  //Prediction Terms
+  //State Vector
+  Eigen::VectorXd x; //OVERALL STATE VECTOR
+  //IMU State Vectors
+  Eigen::VectorXd xi; //IMU STATE VECTOR (Combination of Vectors Below)
+  Eigen::Quaternion qi; //Rotation Quaternion of IMU Frame wrt to Global Frame   
+  Eigen::MatrixXd Cq; //Rotational Matrix of Quaternion
+  Eigen::VectorXd bg; //Gyroscope Bias
+  Eigen::VectorXd vi; //Velocity of IMU
+  Eigen::VectorXd ba; //Accelerometer Bias
+  Eigen::VectorXd pi; //Position of IMU Frame wrt to Global Frame
 
+
+  //Camera Pose State Vectors
+  Eigen::VectorXd cs; //CAMERA STATE VECTOR (Stores all Camera Poses Needed (up to N-max))
+  Eigen::VectorXd qcr; //Most Recent Quaternion of Camera wrt to Global Frame
+  Eigen::VectorXd pcr; //Most Recent Position of Camera wrt to Global Frame
+
+  //State Covariance
+  Eigen::MatrixXd F; //Error State Jacobian
+  Eigen::MatrixXd G; //Error State Noise Jacobian 
+  Eigen::MatrixXd P; //TOTAL COVARIANCE MATRIX
+  Eigen::MatrixXd Pii; //Covariance Matrix of IMU
+  Eigen::MatrixXd Pic; //Correlation Matrix between IMU and Camera
+  Eigen::MatrixXd Pcc; //Covariance Matrix of Camera
+  Eigen
+  //Measurement Model
+  Eigen::VectorXd am; //accelerometer reading
+  Eigen::VectorXd wm; //gyroscope reading
+  Eigen::MatrixXd Am; //skew matrix acclerometer
+  Eigen::MatrixXd Wm; //skew matrix gyroscope
+  Eigen::VectorXd ni; //measurement noise of IMU
+  Eigen::MatrixXd Qi; //Covariance Matrix of IMU Noise
+  Eigen::MatrixXd ST; //State Transition Matrix
+
+  //Old Stuff
   //prediction terms
   Eigen::VectorXd x; //State Posterior Vector
   Eigen::MatrixXd P; //State Posterior Covariance
@@ -51,8 +82,15 @@ class MSCK_Filter {
 
   //useful constants
   Eigen::MatrixXd I; //Identity Matrix 
+  Eigen::MatrixXd x; 
   double t_0 = 0.0;
   double dt = 0.0;
+  //Constants per measurements:
+  double dti = 0.0; // IMU Time Step
+  double dtc = 0.0; // Camera Time Step
+  int N = 0;
+  int Nmax =10;  
+  
 
   //main functions
   void init();

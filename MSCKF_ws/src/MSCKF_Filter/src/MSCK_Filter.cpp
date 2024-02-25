@@ -13,47 +13,72 @@ MSCK_Filter::MSCK_Filter(const ros::NodeHandle &nh,
 }
 void MSCK_Filter::init(){
   // Initial Prior Estimates
-  x = Eigen::VectorXd::Zero(3); // State Posterior Vector
-  P.resize(3,3); // State Covariance
-  float p = 0.05;
-  P   << p, 0, 0,
-         0, p, 0,
-         0, 0, p;
+  x = Eigen::VectorXd::Zero(16+7*N); // State Posterior Vector
+  xi = Eigen::VectorXd::Zero(16); //Imu State Vector
+  qi = Eigen::Quaternion::Identity();
+  Cq.resize(3,3);//Rotational Matrix of Quaternion
+  Cq = qi.normalized().toRotationMatrix();
+  bg = Eigen::VectorXd::Zero(3);//Gyrscope Bias
+  vi = Eigen::VectorXd::Zero(3);//Velocity Vector
+  ba = Eigen::VectorXd::Zero(3);//Accelerometer Bias
+  pi = Eigen::VectorXd::Zero(3);//Position Vector
 
-  u = Eigen::VectorXd::Zero(2); //Control Input Vector
+  cs = Eigen::VectorXd::Zero(7*N);//Camera State Vector
+  qcr = Eigen::VectorXd::Zero(7*N);//Camera State Rotation Recent
+  pcr = Eigen::VectorXd::Zero(7*N);//Camera State Position Recent
 
-  Q.resize(2,2); // Control Input Covariance
-  float q = 0.01;
-  Q   << q, 0,
-         0, q;
-  
-  y = Eigen::VectorXd::Zero(2); // Measurement Vector
-  
-  R.resize(2,2); // Measurement Covariance
-  float r = 1;
-  R   << r, 0,
-         0, r;
+  F.resize(15,15) // Error State Jacobian
+  F = << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //2
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //3
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //4
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //5
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //6
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //7
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //8
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //9
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //10
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //11
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //12
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //13
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //14
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; //15
 
-  K.resize(3,2); // Kalman Gain
-  K   << 0, 0,
-         0, 0,
-         0, 0;
-  
-  I.resize(3,3); // Identity Matrix
-  I   << 1, 0, 0,
-         0, 1, 0,
-         0, 0, 1;
-  xp = Eigen::VectorXd::Zero(3); // State Estimate/Prior Vector
-  yp = Eigen::VectorXd::Zero(2); // Observation Model Prior Vector
-  xo = Eigen::VectorXd::Zero(3); // Previous Estimate Posterior Vector
-  yo = Eigen::VectorXd::Zero(2); // Previous Observation Model Vector
-  Pp.resize(3,3); // State Estimate/Prior Covariance
-  
-  F.resize(3,3); // Motion Model Jacobian
-  Qp.resize(2,2); // Motion Noise Jacobian
-  G.resize(2,3); // Observation Model Jacobian
-  Rp.resize(2,2); // Observation Noise Jacobian
-  wp.resize(3,2); // Observation Noise Derivative
+  G.resize(15,12) //Error State Noise Jacobian 
+  G = << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //2
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //3
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //4
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //5
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //6
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //7
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //8
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //9
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //10
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //11
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //12
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //13
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //14
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; //15
+  P.resize(15+6*N, 15+6*N) //TOTAL COVARIANCE MATRIX
+  P = Eigen::MatrixXd::Zero(15+6*N, 15+6*N);
+  Pii.resize(15, 15) //Covariance Matrix of IMU
+  Pii = Eigen::MatrixXd::Zero(15, 15);
+  Pcc.resize(6*N, 6*N) //Covariance Matrix of Camera
+  Pcc = Eigen::MatrixXd::Zero(6*N, 6*N);
+  Pic.resize(15, 6*N) //Correlation Matrix between IMU and Camera
+  Pic = Eigen::MatrixXd::Zero(15, 6*N);
+  am = Eigen::VectorXd::Zero(3); //Acclerometer vector
+  wm = Eigen::VectorXd::Zero(3); //Gyrscope reading
+  Am.resize(3,3); //skew matrix accelerometer
+  Am = Eigen::MatrixXd::Zero(3,3);
+  Wm.resize(3,3); //skew matrix gyroscope
+  Wm = Eigen::MatrixXd::Zero(3,3);
+  ni = Eigen::VectorXd::Zero(3+3+3+3);//IMU measurement Noise
+  Qi.resize(12,12);
+  Qi = Eigen::MatrixXd::Zero(12,12); //Covariance Matrix of IMU Noise
+  ST.resize(15,15);
+  ST = Eigen::MatrixXd::Identity(); 
 }
 
 void MSCK_Filter::odom_Callback(const nav_msgs::Odometry &msg) {
