@@ -46,7 +46,7 @@ class MSCK_Filter {
   Eigen::MatrixXd Pii; //Covariance Matrix of IMU
   Eigen::MatrixXd Pic; //Correlation Matrix between IMU and Camera
   Eigen::MatrixXd Pcc; //Covariance Matrix of Camera
-  Eigen
+  
   //Measurement Model
   Eigen::VectorXd am; //accelerometer reading
   Eigen::VectorXd wm; //gyroscope reading

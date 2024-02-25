@@ -6,7 +6,8 @@ namespace MSCKalman {
 MSCK_Filter::MSCK_Filter(const ros::NodeHandle &nh,
                                  const ros::NodeHandle &pnh)
     : nh_(nh), pnh_(pnh) {
-  infoSub_ = nh_.subscribe("noisy_pose_topic", 1, &MSCK_Filter::odom_Callback, this);
+  infoSubIMU_ = nh_.subscribe("noisy_pose_topic_IMU", 1, &MSCK_Filter::odom_Callback, this);
+  infoSubCAM_ = nh_.subscribe("noisy_pose_topic_CAM", 1, &MSCK_Filter::odom_Callback, this);
   posePub_ = nh_.advertise<nav_msgs::Odometry>("est_pose_topic", 1000);
   double t_0 = 0;
   double dt = 0;
