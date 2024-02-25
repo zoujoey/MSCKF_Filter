@@ -25,19 +25,19 @@ class MSCK_Filter {
   //State Vector
   Eigen::VectorXd x; //OVERALL STATE VECTOR
   //IMU State Vectors
-  Eigen::VectorXd xi; //IMU STATE VECTOR (Combination of Vectors Below)
-  Eigen::Quaternion qi; //Rotation Quaternion of IMU Frame wrt to Global Frame   
-  Eigen::MatrixXd Cq; //Rotational Matrix of Quaternion
-  Eigen::VectorXd bg; //Gyroscope Bias
-  Eigen::VectorXd vi; //Velocity of IMU
-  Eigen::VectorXd ba; //Accelerometer Bias
-  Eigen::VectorXd pi; //Position of IMU Frame wrt to Global Frame
+  Eigen::VectorXd x_imu; //IMU STATE VECTOR (Combination of Vectors Below)
+  Eigen::Quaternion rotation_q; //Rotation Quaternion of IMU Frame wrt to Global Frame   
+  Eigen::MatrixXd rotation_matrix; //Rotational Matrix of Quaternion
+  Eigen::VectorXd gyr_bias; //Gyroscope Bias
+  Eigen::VectorXd imu_vel; //Velocity of IMU
+  Eigen::VectorXd acc_bias; //Accelerometer Bias
+  Eigen::VectorXd imu_pos; //Position of IMU Frame wrt to Global Frame
 
 
   //Camera Pose State Vectors
-  Eigen::VectorXd cs; //CAMERA STATE VECTOR (Stores all Camera Poses Needed (up to N-max))
-  Eigen::VectorXd qcr; //Most Recent Quaternion of Camera wrt to Global Frame
-  Eigen::VectorXd pcr; //Most Recent Position of Camera wrt to Global Frame
+  Eigen::VectorXd cam_state; //CAMERA STATE VECTOR (Stores all Camera Poses Needed (up to N-max))
+  Eigen::VectorXd cam_q; //Most Recent Quaternion of Camera wrt to Global Frame
+  Eigen::VectorXd cam_pos; //Most Recent Position of Camera wrt to Global Frame
 
   //State Covariance
   Eigen::MatrixXd F; //Error State Jacobian
@@ -48,13 +48,13 @@ class MSCK_Filter {
   Eigen::MatrixXd Pcc; //Covariance Matrix of Camera
   
   //Measurement Model
-  Eigen::VectorXd am; //accelerometer reading
-  Eigen::VectorXd wm; //gyroscope reading
-  Eigen::MatrixXd Am; //skew matrix acclerometer
-  Eigen::MatrixXd Wm; //skew matrix gyroscope
-  Eigen::VectorXd ni; //measurement noise of IMU
-  Eigen::MatrixXd Qi; //Covariance Matrix of IMU Noise
-  Eigen::MatrixXd ST; //State Transition Matrix
+  Eigen::VectorXd acc_m; //accelerometer reading
+  Eigen::VectorXd gyr_m; //gyroscope reading
+  Eigen::MatrixXd acc_skew; //skew matrix acclerometer
+  Eigen::MatrixXd gyr_skew; //skew matrix gyroscope
+  Eigen::VectorXd imu_noise; //measurement noise of IMU
+  Eigen::MatrixXd Q_imu; //Covariance Matrix of IMU Noise
+  Eigen::MatrixXd phi; //State Transition Matrix
 
   //Old Stuff
   //prediction terms
@@ -91,10 +91,14 @@ class MSCK_Filter {
   int N = 0;
   int Nmax =10;  
   
-
   //main functions
   void init();
-  void odom_Callback(const nav_msgs::Odometry &msg);
+  //void odom_Callback(const nav_msgs::Odometry &msg);
+  void IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg);
+  void propagate_imu(const Vector3d& acc_m, const Vector3d& gyr_m);
+  Eigen::Matrix3d skew_symmetric(const Vector3d& vec);
+
+  //Old Functions
   void Iterated_Extended_Kalman_Filter();
   //prediction functions
   void state_prediction();
