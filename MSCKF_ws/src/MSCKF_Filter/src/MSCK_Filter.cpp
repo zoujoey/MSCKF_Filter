@@ -16,7 +16,7 @@ void MSCK_Filter::init(){
   // Initialize Prior Estimates
   x = Eigen::VectorXd::Zero(16+7*N); // State Posterior Vector
   x_imu = Eigen::VectorXd::Zero(16); //Imu State Vector
-  rotation_q = Eigen::Quaternion::Identity();
+  rotation_q = Eigen::Quaternionf::Identity();
   rotation_matrix.resize(3,3);//Rotational Matrix of Quaternion
   //Rotate when needed during IMU propagation
   //rotation_matrix = rotation_q.normalize().toRotationMatrix();
@@ -150,7 +150,7 @@ void imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eig
 
     //Integrate quaternion differently depending on size of gyr
     //Very small gyr will cause numerically instability
-    Eigen::Quaternion q_t_dt;
+    Eigen::Quaternionf q_t_dt;
     if(gyr_norm > 1e-5) { //tune this parameter, current parameter taken from existing implementation
        //Use standard zero-th order integrator
        q_t_dt = (cos(gyr_norm * 0.5 * dt)*Eigen::Matrix4d::Identity() + 

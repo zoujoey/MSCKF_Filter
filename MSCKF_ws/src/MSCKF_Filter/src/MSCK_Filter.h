@@ -26,7 +26,7 @@ class MSCK_Filter {
   Eigen::VectorXd x; //OVERALL STATE VECTOR
   //IMU State Vectors
   Eigen::VectorXd x_imu; //IMU STATE VECTOR (Combination of Vectors Below)
-  Eigen::Quaternion rotation_q; //Rotation Quaternion of IMU Frame wrt to Global Frame   
+  Eigen::Quaternionf rotation_q; //Rotation Quaternion of IMU Frame wrt to Global Frame   
   Eigen::MatrixXd rotation_matrix; //Rotational Matrix of Quaternion
   Eigen::VectorXd gyr_bias; //Gyroscope Bias
   Eigen::VectorXd imu_vel; //Velocity of IMU
@@ -56,33 +56,32 @@ class MSCK_Filter {
   Eigen::MatrixXd Q_imu; //Covariance Matrix of IMU Noise
   Eigen::MatrixXd phi; //State Transition Matrix
 
-  //Old Stuff
-  //prediction terms
-  Eigen::VectorXd x; //State Posterior Vector
-  Eigen::MatrixXd P; //State Posterior Covariance
-  Eigen::VectorXd u; //Control Input Vector
-  Eigen::MatrixXd Q; //Control Input Covariance
-  Eigen::MatrixXd F; //Motion Model Jacobian
+  // //Old Stuff
+  // //prediction terms
+  // Eigen::VectorXd x; //State Posterior Vector
+  // Eigen::MatrixXd P; //State Posterior Covariance
+  // Eigen::VectorXd u; //Control Input Vector
+  // Eigen::MatrixXd Q; //Control Input Covariance
+  // Eigen::MatrixXd F; //Motion Model Jacobian
   
-  //correction terms
-  Eigen::VectorXd xp; //State Estimate/Prior Vector
-  Eigen::VectorXd yp; //State Estimate/Prior Vector - motion model
-  Eigen::VectorXd xo; //Previous Estimate
-  Eigen::VectorXd yo; //Previous Estimate Vector
-  Eigen::MatrixXd Pp; //State Estimate/Prior Covariance
-  Eigen::MatrixXd K; //Kalman Gain
-  Eigen::VectorXd y; //Measurement Vector 
-  Eigen::MatrixXd R; //Measurement Covariance
-  Eigen::MatrixXd G; //Observation Model Jacobian
+  // //correction terms
+  // Eigen::VectorXd xp; //State Estimate/Prior Vector
+  // Eigen::VectorXd yp; //State Estimate/Prior Vector - motion model
+  // Eigen::VectorXd xo; //Previous Estimate
+  // Eigen::VectorXd yo; //Previous Estimate Vector
+  // Eigen::MatrixXd Pp; //State Estimate/Prior Covariance
+  // Eigen::MatrixXd K; //Kalman Gain
+  // Eigen::VectorXd y; //Measurement Vector 
+  // Eigen::MatrixXd R; //Measurement Covariance
+  // Eigen::MatrixXd G; //Observation Model Jacobian
   
-  //Jacobian Calculations
-  Eigen::MatrixXd Qp; //Motion Model Jacobian Noise
-  Eigen::MatrixXd Rp; //Observation Model Jacobian Noise
-  Eigen::MatrixXd wp; //OBservation Model Derivative Noise
+  // //Jacobian Calculations
+  // Eigen::MatrixXd Qp; //Motion Model Jacobian Noise
+  // Eigen::MatrixXd Rp; //Observation Model Jacobian Noise
+  // Eigen::MatrixXd wp; //OBservation Model Derivative Noise
 
   //useful constants
   Eigen::MatrixXd I; //Identity Matrix 
-  Eigen::MatrixXd x; 
   double t_0 = 0.0;
   double dt = 0.0;
   //Constants per measurements:
@@ -120,7 +119,7 @@ class MSCK_Filter {
 
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
-  ros::Subscriber infoSub_;
+  ros::Subscriber infoSubIMU_;
   ros::Publisher posePub_;
 };
 

@@ -1,0 +1,234 @@
+[35m[1mScanning dependencies of target MSCK_Filter[0m
+[ 33%] [32mBuilding CXX object CMakeFiles/MSCK_Filter.dir/src/main_MSCKfilter.cpp.o[0m
+[ 66%] [32mBuilding CXX object CMakeFiles/MSCK_Filter.dir/src/MSCK_Filter.cpp.o[0m
+In file included from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:1[m[K:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:29:3:[m[K [01;31m[Kerror: [m[Kinvalid use of template-name ‘[01m[KEigen::Quaternion[m[K’ without an argument list
+   29 |   [01;31m[KEigen[m[K::Quaternion rotation_q; //Rotation Quaternion of IMU Frame wrt to Global Frame
+      |   [01;31m[K^~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:29:3:[m[K [01;36m[Knote: [m[Kclass template argument deduction is only available with ‘[01m[K-std=c++17[m[K’ or ‘[01m[K-std=gnu++17[m[K’
+In file included from [01m[K/usr/include/eigen3/Eigen/Core:365[m[K,
+                 from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/include/MSCKF_Filter/math_utils.h:4[m[K,
+                 from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:5[m[K,
+                 from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:1[m[K:
+[01m[K/usr/include/eigen3/Eigen/src/Core/util/ForwardDeclarations.h:273:58:[m[K [01;36m[Knote: [m[K‘[01m[Ktemplate<class Scalar, int Options> class Eigen::Quaternion[m[K’ declared here
+  273 | template<typename Scalar, int Options = AutoAlign> class [01;36m[KQuaternion[m[K;
+      |                                                          [01;36m[K^~~~~~~~~~[m[K
+In file included from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/main_MSCKfilter.cpp:4[m[K:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:29:3:[m[K [01;31m[Kerror: [m[Kinvalid use of template-name ‘[01m[KEigen::Quaternion[m[K’ without an argument list
+   29 |   [01;31m[KEigen[m[K::Quaternion rotation_q; //Rotation Quaternion of IMU Frame wrt to Global Frame
+      |   [01;31m[K^~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:29:3:[m[K [01;36m[Knote: [m[Kclass template argument deduction is only available with ‘[01m[K-std=c++17[m[K’ or ‘[01m[K-std=gnu++17[m[K’
+In file included from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:1[m[K:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:61:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::VectorXd MSCKalman::MSCK_Filter::x[m[K’
+   61 |   Eigen::VectorXd [01;31m[Kx[m[K; //State Posterior Vector
+      |                   [01;31m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:26:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::VectorXd MSCKalman::MSCK_Filter::x[m[K’
+   26 |   Eigen::VectorXd [01;36m[Kx[m[K; //OVERALL STATE VECTOR
+      |                   [01;36m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:62:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::P[m[K’
+   62 |   Eigen::MatrixXd [01;31m[KP[m[K; //State Posterior Covariance
+      |                   [01;31m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:45:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::P[m[K’
+   45 |   Eigen::MatrixXd [01;36m[KP[m[K; //TOTAL COVARIANCE MATRIX
+      |                   [01;36m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:65:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::F[m[K’
+   65 |   Eigen::MatrixXd [01;31m[KF[m[K; //Motion Model Jacobian
+      |                   [01;31m[K^[m[K
+In file included from [01m[K/usr/include/eigen3/Eigen/Core:365[m[K,
+                 from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/include/MSCKF_Filter/math_utils.h:4[m[K,
+                 from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:5[m[K,
+                 from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/main_MSCKfilter.cpp:4[m[K:
+[01m[K/usr/include/eigen3/Eigen/src/Core/util/ForwardDeclarations.h:273:58:[m[K [01;36m[Knote: [m[K‘[01m[Ktemplate<class Scalar, int Options> class Eigen::Quaternion[m[K’ declared here
+  273 | template<typename Scalar, int Options = AutoAlign> class [01;36m[KQuaternion[m[K;
+      |                                                          [01;36m[K^~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:43:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::F[m[K’
+   43 |   Eigen::MatrixXd [01;36m[KF[m[K; //Error State Jacobian
+      |                   [01;36m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:76:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::G[m[K’
+   76 |   Eigen::MatrixXd [01;31m[KG[m[K; //Observation Model Jacobian
+      |                   [01;31m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:44:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::G[m[K’
+   44 |   Eigen::MatrixXd [01;36m[KG[m[K; //Error State Noise Jacobian
+      |                   [01;36m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:85:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::x[m[K’
+   85 |   Eigen::MatrixXd [01;31m[Kx[m[K;
+      |                   [01;31m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:26:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::VectorXd MSCKalman::MSCK_Filter::x[m[K’
+   26 |   Eigen::VectorXd [01;36m[Kx[m[K; //OVERALL STATE VECTOR
+      |                   [01;36m[K^[m[K
+In file included from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/main_MSCKfilter.cpp:4[m[K:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:61:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::VectorXd MSCKalman::MSCK_Filter::x[m[K’
+   61 |   Eigen::VectorXd [01;31m[Kx[m[K; //State Posterior Vector
+      |                   [01;31m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:26:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::VectorXd MSCKalman::MSCK_Filter::x[m[K’
+   26 |   Eigen::VectorXd [01;36m[Kx[m[K; //OVERALL STATE VECTOR
+      |                   [01;36m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:62:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::P[m[K’
+   62 |   Eigen::MatrixXd [01;31m[KP[m[K; //State Posterior Covariance
+      |                   [01;31m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:45:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::P[m[K’
+   45 |   Eigen::MatrixXd [01;36m[KP[m[K; //TOTAL COVARIANCE MATRIX
+      |                   [01;36m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:65:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::F[m[K’
+   65 |   Eigen::MatrixXd [01;31m[KF[m[K; //Motion Model Jacobian
+      |                   [01;31m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:43:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::F[m[K’
+   43 |   Eigen::MatrixXd [01;36m[KF[m[K; //Error State Jacobian
+      |                   [01;36m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:76:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::G[m[K’
+   76 |   Eigen::MatrixXd [01;31m[KG[m[K; //Observation Model Jacobian
+      |                   [01;31m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:44:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::G[m[K’
+   44 |   Eigen::MatrixXd [01;36m[KG[m[K; //Error State Noise Jacobian
+      |                   [01;36m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:85:19:[m[K [01;31m[Kerror: [m[Kredeclaration of ‘[01m[KEigen::MatrixXd MSCKalman::MSCK_Filter::x[m[K’
+   85 |   Eigen::MatrixXd [01;31m[Kx[m[K;
+      |                   [01;31m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:26:19:[m[K [01;36m[Knote: [m[Kprevious declaration ‘[01m[KEigen::VectorXd MSCKalman::MSCK_Filter::x[m[K’
+   26 |   Eigen::VectorXd [01;36m[Kx[m[K; //OVERALL STATE VECTOR
+      |                   [01;36m[K^[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:98:28:[m[K [01;31m[Kerror: [m[K‘[01m[KVector3d[m[K’ does not name a type; did you mean ‘[01m[KVector3Data[m[K’?
+   98 |   void propagate_imu(const [01;31m[KVector3d[m[K& acc_m, const Vector3d& gyr_m);
+      |                            [01;31m[K^~~~~~~~[m[K
+      |                            [32m[KVector3Data[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:98:28:[m[K [01;31m[Kerror: [m[K‘[01m[KVector3d[m[K’ does not name a type; did you mean ‘[01m[KVector3Data[m[K’?
+   98 |   void propagate_imu(const [01;31m[KVector3d[m[K& acc_m, const Vector3d& gyr_m);
+      |                            [01;31m[K^~~~~~~~[m[K
+      |                            [32m[KVector3Data[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:98:51:[m[K [01;31m[Kerror: [m[K‘[01m[KVector3d[m[K’ does not name a type; did you mean ‘[01m[KVector3Data[m[K’?
+   98 |   void propagate_imu(const Vector3d& acc_m, const [01;31m[KVector3d[m[K& gyr_m);
+      |                                                   [01;31m[K^~~~~~~~[m[K
+      |                                                   [32m[KVector3Data[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:98:51:[m[K [01;31m[Kerror: [m[K‘[01m[KVector3d[m[K’ does not name a type; did you mean ‘[01m[KVector3Data[m[K’?
+   98 |   void propagate_imu(const Vector3d& acc_m, const [01;31m[KVector3d[m[K& gyr_m);
+      |                                                   [01;31m[K^~~~~~~~[m[K
+      |                                                   [32m[KVector3Data[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:99:40:[m[K [01;31m[Kerror: [m[K‘[01m[KVector3d[m[K’ does not name a type; did you mean ‘[01m[KVector3Data[m[K’?
+   99 |   Eigen::Matrix3d skew_symmetric(const [01;31m[KVector3d[m[K& vec);
+      |                                        [01;31m[K^~~~~~~~[m[K
+      |                                        [32m[KVector3Data[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:99:40:[m[K [01;31m[Kerror: [m[K‘[01m[KVector3d[m[K’ does not name a type; did you mean ‘[01m[KVector3Data[m[K’?
+   99 |   Eigen::Matrix3d skew_symmetric(const [01;31m[KVector3d[m[K& vec);
+      |                                        [01;31m[K^~~~~~~~[m[K
+      |                                        [32m[KVector3Data[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:[m[K In constructor ‘[01m[KMSCKalman::MSCK_Filter::MSCK_Filter(const ros::NodeHandle&, const ros::NodeHandle&)[m[K’:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:9:3:[m[K [01;31m[Kerror: [m[K‘[01m[KinfoSubIMU_[m[K’ was not declared in this scope; did you mean ‘[01m[KinfoSub_[m[K’?
+    9 |   [01;31m[KinfoSubIMU_[m[K = nh_.subscribe<sensor_msgs::Imu>("noisy_pose_topic_IMU", 1, &MSCK_Filter::IMU_Callback, this);
+      |   [01;31m[K^~~~~~~~~~~[m[K
+      |   [32m[KinfoSub_[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:[m[K In member function ‘[01m[Kvoid MSCKalman::MSCK_Filter::init()[m[K’:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:19:3:[m[K [01;31m[Kerror: [m[K‘[01m[Krotation_q[m[K’ was not declared in this scope
+   19 |   [01;31m[Krotation_q[m[K = Eigen::Quaternionf::Identity();
+      |   [01;31m[K^~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:31:3:[m[K [01;31m[Kerror: [m[K‘[01m[Kgravity[m[K’ was not declared in this scope
+   31 |   [01;31m[Kgravity[m[K = Eigen::Vector3d::Zero(); //Initialize gravity vector, set value later
+      |   [01;31m[K^~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:33:18:[m[K [01;31m[Kerror: [m[Kexpected ‘[01m[K;[m[K’ before ‘[01m[KF[m[K’
+   33 |   F.resize(15,15)[01;31m[K [m[K// Error State Jacobian
+      |                  [01;31m[K^[m[K
+      |                  [32m[K;[m[K
+   34 |   [32m[KF[m[K = << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
+      |   [32m[K~[m[K               
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:50:18:[m[K [01;31m[Kerror: [m[Kexpected ‘[01m[K;[m[K’ before ‘[01m[KG[m[K’
+   50 |   G.resize(15,12)[01;31m[K [m[K//Error State Noise Jacobian
+      |                  [01;31m[K^[m[K
+      |                  [32m[K;[m[K
+   51 |   [32m[KG[m[K = << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
+      |   [32m[K~[m[K               
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:67:27:[m[K [01;31m[Kerror: [m[Kexpected ‘[01m[K;[m[K’ before ‘[01m[KP[m[K’
+   67 |   P.resize(15+6*N, 15+6*N)[01;31m[K [m[K//TOTAL COVARIANCE MATRIX
+      |                           [01;31m[K^[m[K
+      |                           [32m[K;[m[K
+   68 |   [32m[KP[m[K = Eigen::MatrixXd::Zero(15+6*N, 15+6*N);
+      |   [32m[K~[m[K                        
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:69:21:[m[K [01;31m[Kerror: [m[Kexpected ‘[01m[K;[m[K’ before ‘[01m[KPii[m[K’
+   69 |   Pii.resize(15, 15)[01;31m[K [m[K//Covariance Matrix of IMU
+      |                     [01;31m[K^[m[K
+      |                     [32m[K;[m[K
+   70 |   [32m[KPii[m[K = Eigen::MatrixXd::Zero(15, 15);
+      |   [32m[K~~~[m[K                
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:71:23:[m[K [01;31m[Kerror: [m[Kexpected ‘[01m[K;[m[K’ before ‘[01m[KPcc[m[K’
+   71 |   Pcc.resize(6*N, 6*N)[01;31m[K [m[K//Covariance Matrix of Camera
+      |                       [01;31m[K^[m[K
+      |                       [32m[K;[m[K
+   72 |   [32m[KPcc[m[K = Eigen::MatrixXd::Zero(6*N, 6*N);
+      |   [32m[K~~~[m[K                  
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:73:22:[m[K [01;31m[Kerror: [m[Kexpected ‘[01m[K;[m[K’ before ‘[01m[KPic[m[K’
+   73 |   Pic.resize(15, 6*N)[01;31m[K [m[K//Correlation Matrix between IMU and Camera
+      |                      [01;31m[K^[m[K
+      |                      [32m[K;[m[K
+   74 |   [32m[KPic[m[K = Eigen::MatrixXd::Zero(15, 6*N);
+      |   [32m[K~~~[m[K                 
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:[m[K In member function ‘[01m[Kvoid MSCKalman::MSCK_Filter::IMU_Callback(const ImuConstPtr&)[m[K’:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:94:19:[m[K [01;31m[Kerror: [m[Kcannot convert ‘[01m[KEigen::VectorXd[m[K’ {aka ‘[01m[KEigen::Matrix<double, -1, 1>[m[K’} to ‘[01m[Kconst int&[m[K’
+   94 |     propagate_imu([01;31m[Kacc_m[m[K, gyr_m);
+      |                   [01;31m[K^~~~~[m[K
+      |                   [01;31m[K|[m[K
+      |                   [01;31m[KEigen::VectorXd {aka Eigen::Matrix<double, -1, 1>}[m[K
+In file included from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:1[m[K:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:98:38:[m[K [01;36m[Knote: [m[K  initializing argument 1 of ‘[01m[Kvoid MSCKalman::MSCK_Filter::propagate_imu(const int&, const int&)[m[K’
+   98 |   void propagate_imu([01;36m[Kconst Vector3d& acc_m[m[K, const Vector3d& gyr_m);
+      |                      [01;36m[K~~~~~~~~~~~~~~~~^~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:[m[K At global scope:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:97:6:[m[K [01;31m[Kerror: [m[Kno declaration matches ‘[01m[Kvoid MSCKalman::MSCK_Filter::propagate_imu(const Vector3d&, const Vector3d&)[m[K’
+   97 | void [01;31m[KMSCK_Filter[m[K::propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m){
+      |      [01;31m[K^~~~~~~~~~~[m[K
+In file included from [01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:1[m[K:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:98:8:[m[K [01;36m[Knote: [m[Kcandidate is: ‘[01m[Kvoid MSCKalman::MSCK_Filter::propagate_imu(const int&, const int&)[m[K’
+   98 |   void [01;36m[Kpropagate_imu[m[K(const Vector3d& acc_m, const Vector3d& gyr_m);
+      |        [01;36m[K^~~~~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.h:13:7:[m[K [01;36m[Knote: [m[K‘[01m[Kclass MSCKalman::MSCK_Filter[m[K’ defined here
+   13 | class [01;36m[KMSCK_Filter[m[K {
+      |       [01;36m[K^~~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:[m[K In function ‘[01m[Kvoid MSCKalman::imu_state_estimate(const double&, const Vector3d&, const Vector3d&)[m[K’:
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:145:23:[m[K [01;31m[Kerror: [m[K‘[01m[Kgyr[m[K’ was not declared in this scope; did you mean ‘[01m[Kgyro[m[K’?
+  145 |     double gyr_norm = [01;31m[Kgyr[m[K.norm(); //get magnitude of gyro
+      |                       [01;31m[K^~~[m[K
+      |                       [32m[Kgyro[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:147:30:[m[K [01;31m[Kerror: [m[K‘[01m[Kskew_symmetric[m[K’ was not declared in this scope
+  147 |     omega.block<3,3>(0,0) = -[01;31m[Kskew_symmetric[m[K(gyr);
+      |                              [01;31m[K^~~~~~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:157:56:[m[K [01;31m[Kerror: [m[K‘[01m[Krotation_q[m[K’ was not declared in this scope
+  157 |               (1/gyr_norm)*sin(gyr_norm*0.5*dt)*omega)*[01;31m[Krotation_q[m[K;
+      |                                                        [01;31m[K^~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:158:8:[m[K [01;31m[Kerror: [m[K‘[01m[Kq_t_dt2[m[K’ was not declared in this scope; did you mean ‘[01m[Kq_t_dt[m[K’?
+  158 |        [01;31m[Kq_t_dt2[m[K = (cos(gyr_norm*0.25*dt)*Eigen::Matrix4d::Identity() +
+      |        [01;31m[K^~~~~~~[m[K
+      |        [32m[Kq_t_dt[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:163:62:[m[K [01;31m[Kerror: [m[K‘[01m[Krotation_q[m[K’ was not declared in this scope
+  163 |        q_t_dt = (Eigen::Matrix4d::Identity() + 0.5*dt*omega)*[01;31m[Krotation_q[m[K;
+      |                                                              [01;31m[K^~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:164:8:[m[K [01;31m[Kerror: [m[K‘[01m[Kq_t_dt2[m[K’ was not declared in this scope; did you mean ‘[01m[Kq_t_dt[m[K’?
+  164 |        [01;31m[Kq_t_dt2[m[K = (Eigen::Matrix4d::Identity() + 0.25*dt*omega)*rotation_q;
+      |        [01;31m[K^~~~~~~[m[K
+      |        [32m[Kq_t_dt[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:167:5:[m[K [01;31m[Kerror: [m[K‘[01m[KC_dt_transpose[m[K’ was not declared in this scope
+  167 |     [01;31m[KC_dt_transpose[m[K = q_t_dt.normalize().toRotationMatrix().transpose();
+      |     [01;31m[K^~~~~~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:167:38:[m[K [01;31m[Kerror: [m[Kinvalid use of ‘[01m[Kvoid[m[K’
+  167 |     C_dt_transpose = [01;31m[Kq_t_dt.normalize()[m[K.toRotationMatrix().transpose();
+      |                      [01;31m[K~~~~~~~~~~~~~~~~^~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:168:5:[m[K [01;31m[Kerror: [m[K‘[01m[KC_dt2_transpose[m[K’ was not declared in this scope
+  168 |     [01;31m[KC_dt2_transpose[m[K = q_t_dt2.normalize().toRotationMatrix().transpose();
+      |     [01;31m[K^~~~~~~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:168:23:[m[K [01;31m[Kerror: [m[K‘[01m[Kq_t_dt2[m[K’ was not declared in this scope; did you mean ‘[01m[Kq_t_dt[m[K’?
+  168 |     C_dt2_transpose = [01;31m[Kq_t_dt2[m[K.normalize().toRotationMatrix().transpose();
+      |                       [01;31m[K^~~~~~~[m[K
+      |                       [32m[Kq_t_dt[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:170:50:[m[K [01;31m[Kerror: [m[K‘[01m[Kgravity[m[K’ was not declared in this scope
+  170 |     Eigen::Vector3d k_1_v = C_dt_transpose*acc + [01;31m[Kgravity[m[K;
+      |                                                  [01;31m[K^~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:171:29:[m[K [01;31m[Kerror: [m[K‘[01m[Kimu_vel[m[K’ was not declared in this scope
+  171 |     Eigen::Vector3d k_1_p = [01;31m[Kimu_vel[m[K;
+      |                             [01;31m[K^~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:182:5:[m[K [01;31m[Kerror: [m[K‘[01m[Krotation_q[m[K’ was not declared in this scope
+  182 |     [01;31m[Krotation_q[m[K = q_t_dt;
+      |     [01;31m[K^~~~~~~~~~[m[K
+[01m[K/home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/src/MSCK_Filter.cpp:185:5:[m[K [01;31m[Kerror: [m[K‘[01m[Kimu_pos[m[K’ was not declared in this scope
+  185 |     [01;31m[Kimu_pos[m[K = imu_pos + (dt/6)*(k_1_p + 2*k_2_p + 2*k_3_p + k_4_p);
+      |     [01;31m[K^~~~~~~[m[K
+make[2]: *** [CMakeFiles/MSCK_Filter.dir/build.make:63: CMakeFiles/MSCK_Filter.dir/src/main_MSCKfilter.cpp.o] Error 1
+make[2]: *** Waiting for unfinished jobs....
+make[2]: *** [CMakeFiles/MSCK_Filter.dir/build.make:76: CMakeFiles/MSCK_Filter.dir/src/MSCK_Filter.cpp.o] Error 1
+make[1]: *** [CMakeFiles/Makefile2:628: CMakeFiles/MSCK_Filter.dir/all] Error 2
+make: *** [Makefile:141: all] Error 2

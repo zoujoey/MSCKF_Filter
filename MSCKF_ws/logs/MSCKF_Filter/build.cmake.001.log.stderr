@@ -1,0 +1,15 @@
+[33mWARNING: Package name "MSCKF_Filter" does not follow the naming conventions. It should start with a lower case letter and only contain lower case letters, digits, underscores, and dashes.[0m
+[31m[1mCMake Error[0m at /home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/CMakeLists.txt:39 (add_executable):
+  Cannot find source file:
+
+    src/ex1_MSCKFilter.cpp
+
+  Tried extensions .c .C .c++ .cc .cpp .cxx .cu .m .M .mm .h .hh .h++ .hm
+  .hpp .hxx .in .txx
+
+
+[31m[1mCMake Error[0m at /home/zoujoey/MSCKF_Filter/MSCKF_ws/src/MSCKF_Filter/CMakeLists.txt:39 (add_executable):
+  No SOURCES given to target: Noisy_Circular_Data_Generator
+
+
+CMake Generate step failed.  Build files cannot be regenerated correctly.

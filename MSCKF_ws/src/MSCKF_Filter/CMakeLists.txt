@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(MSCK_Filter)
+project(MSCKF_Filter)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -30,24 +30,16 @@ catkin_package()
 ###########
 
 include_directories(
-  include/MSCK_Filter
+  include/MSCKF_Filter
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${PCL_INCLUDE_DIRS}
 )
 
-add_executable(Noisy_Circular_Data_Generator
-  src/ex1_MSCKFilter.cpp)
-
 add_executable(MSCK_Filter
   src/main_MSCKfilter.cpp
   src/MSCK_Filter.cpp
 )
-
-target_link_libraries(Noisy_Circular_Data_Generator
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-  ${PCL_LIBRARIES})
 
 target_link_libraries(MSCK_Filter
   ${catkin_LIBRARIES}
