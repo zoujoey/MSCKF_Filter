@@ -3,11 +3,13 @@
 #include <memory>
 #include <vector>
 #include <cmath>
-#include <math_utils.h>
+//#include <math_utils.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <nav_msgs/Odometry.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <eigen_conversions/eigen_msg.h>
+#include <tf_conversions/tf_eigen.h>
 
 namespace MSCKalman {
 
@@ -101,29 +103,29 @@ class MSCK_Filter {
   void IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg);
   void propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m);
   void imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc);
-  Eigen::Matrix3d skew_symmetric(const Vector3d& vec);
+  Eigen::Matrix3d skew_symmetric(const Eigen::Vector3d& vec);
   void gravity_bias_initialization();
   
 
   //Old Functions
-  void Iterated_Extended_Kalman_Filter();
-  //prediction functions
-  void state_prediction();
-  void covariance_prediction();
-  //kalman gain function
-  void kalman_gain();
-  //correction functions
-  void state_correction();
-  void state_correction_I();
-  void covariance_correction();
-  void covariance_correction_I();
-  //Jacobian Calculators
-  void motion_model_Jacobian();
-  void motion_noise_Jacobian();
-  void observation_model_Jacobian();
-  void observation_model_Jacobian_O();
-  void observation_noise_Jacobian();
-  void observation_noise_Jacobian_O();
+  // void Iterated_Extended_Kalman_Filter();
+  // //prediction functions
+  // void state_prediction();
+  // void covariance_prediction();
+  // //kalman gain function
+  // void kalman_gain();
+  // //correction functions
+  // void state_correction();
+  // void state_correction_I();
+  // void covariance_correction();
+  // void covariance_correction_I();
+  // //Jacobian Calculators
+  // void motion_model_Jacobian();
+  // void motion_noise_Jacobian();
+  // void observation_model_Jacobian();
+  // void observation_model_Jacobian_O();
+  // void observation_noise_Jacobian();
+  // void observation_noise_Jacobian_O();
 
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;

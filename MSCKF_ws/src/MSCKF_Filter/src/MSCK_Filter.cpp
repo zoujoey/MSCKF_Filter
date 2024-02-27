@@ -1,6 +1,7 @@
 #include "MSCK_Filter.h"
 
 
+
 namespace MSCKalman {
 
 MSCK_Filter::MSCK_Filter(const ros::NodeHandle &nh,
@@ -27,12 +28,13 @@ void MSCK_Filter::init(){
   cam_state = Eigen::VectorXd::Zero(7*N);//Camera State Vector
   cam_q = Eigen::VectorXd::Zero(7*N);//Camera State Rotation Recent
   cam_pos = Eigen::VectorXd::Zero(7*N);//Camera State Position Recent
+  N = 0;
 
   gravity = Eigen::Vector3d::Zero(); //Initialize gravity vector, set value later
   is_gravity_init = false;
 
-  F.resize(15,15) // Error State Jacobian
-  F = << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
+  F.resize(15,15); // Error State Jacobian
+  F << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //2
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //3
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //4
@@ -48,8 +50,8 @@ void MSCK_Filter::init(){
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //14
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; //15
 
-  G.resize(15,12) //Error State Noise Jacobian 
-  G = << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
+  G.resize(15,12); //Error State Noise Jacobian 
+  G << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //2
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //3
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //4
@@ -65,13 +67,13 @@ void MSCK_Filter::init(){
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //14
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; //15
 
-  P.resize(15+6*N, 15+6*N) //TOTAL COVARIANCE MATRIX
+  P.resize(15+6*N, 15+6*N); //TOTAL COVARIANCE MATRIX
   P = Eigen::MatrixXd::Zero(15+6*N, 15+6*N);
-  Pii.resize(15, 15) //Covariance Matrix of IMU
+  Pii.resize(15, 15);//Covariance Matrix of IMU
   Pii = Eigen::MatrixXd::Zero(15, 15);
-  Pcc.resize(6*N, 6*N) //Covariance Matrix of Camera
+  Pcc.resize(6*N, 6*N); //Covariance Matrix of Camera
   Pcc = Eigen::MatrixXd::Zero(6*N, 6*N);
-  Pic.resize(15, 6*N) //Correlation Matrix between IMU and Camera
+  Pic.resize(15, 6*N);//Correlation Matrix between IMU and Camera
   Pic = Eigen::MatrixXd::Zero(15, 6*N);
 
   acc_m = Eigen::VectorXd::Zero(3); //Acclerometer vector
@@ -111,7 +113,7 @@ void MSCK_Filter::propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vecto
     Eigen::Vector3d acc = acc_m - acc_bias;
     Eigen::Vector3d gyr = gyr_m - gyr_bias;
 
-    Eigen::Matrix3d rotation_matrix = rotation_q.normalize().toRotationMatrix();
+    Eigen::Matrix3d rotation_matrix = rotation_q.normalized().toRotationMatrix();
 
     //Transition (F) and Noise (G) Matrix
     //We assume planet rotation is negligible (w_g = 0)
@@ -126,24 +128,32 @@ void MSCK_Filter::propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vecto
     G.block<3,3>(6,6) = -rotation_matrix.transpose();
     G.block<3,3>(9,9) = Eigen::Matrix3d::Identity();
 
+    Eigen::MatrixXd I_15 = Eigen::MatrixXd::Identity(15,15);
+
     //Phi (State Transition Matrix)
     //Approximate Matrix Exponential Using Taylor Series
     //3rd Order For Now
-    //Eigen::MatrixXd F = F * dt;
+    Eigen::MatrixXd F = F * dt;
     Eigen::MatrixXd F_2 = F*F;
     Eigen::MatrixXd F_3 = F*F*F;
-    phi = Eigen::MatrixXd::Identity() + F*dt + (1/2)*F_2*dt*dt + (1/6)*F_3*dt*dt*dt;
+    phi = I_15 + F*dt + (1/2)*F_2*dt*dt + (1/6)*F_3*dt*dt*dt;
     //Discrete Time Noise Covariance Matrix Qk
-    Eigen::MatrixXd Qk = phi*G*Q*G*phi.transpose()*dt;
+    Eigen::MatrixXd Qk = phi*G*Q_imu*G*phi.transpose()*dt;
     //Covariance Propagation for IMU
     Eigen::MatrixXd Pii_1 = phi*Pii*phi.transpose()+Qk;
     //Total Covariance Propagation
     Eigen::MatrixXd P_1;
-    P.resize(15+6*N, 15+6*N) 
+
+    int temp = 6*N;
+
+    P.resize(15+6*N, 15+6*N);
     P_1.block<15,15>(0,0) = Pii_1;
-    P_1.block<6*N,15>(15,0) = (P.block<6*N,15>(15,0))*phi.transpose();
-    P_1.block<15,6*N>(0,15) = phi*(P.block<15,6*N>(0,15));
-    P_1.block<6*N,6*N>(15,15) = P.block<6*N,6*N>(15,15);
+    //P_1.block<temp,15>(15,0) = (P.block<temp,15>(15,0))*phi.transpose();
+    P_1.block(15, 0, temp, 15) = (P.block(15,0, temp, 15))*phi.transpose();
+    //P_1.block<15,temp>(0,15) = phi*(P.block<15,temp>(0,15));
+    P_1.block(15, 0, 15, temp) = phi*(P.block(0,15,15,temp));
+    //P_1.block<temp,temp(15,15) = P.block<temp,temp>(15,15);
+    P_1.block(15,15, temp, temp) = P.block(15, 15, temp, temp);
     P_1 = (P_1+P_1.transpose())*0.5;
 
     imu_state_estimate(dt, gyr, acc);    
@@ -154,7 +164,7 @@ void MSCK_Filter::propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vecto
 }
 
 void MSCK_Filter::gravity_bias_initialization(){
-    Eigen::Vector3d sum_gyro = Eigen::Vector3d::Zero();
+    Eigen::Vector3d sum_gyr = Eigen::Vector3d::Zero();
     Eigen::Vector3d sum_acc = Eigen::Vector3d::Zero();
     Eigen::Vector3d imu_gravity = Eigen::Vector3d::Zero();
 
@@ -162,12 +172,28 @@ void MSCK_Filter::gravity_bias_initialization(){
        Eigen::Vector3d temp_acc_m = Eigen::Vector3d::Zero();
        Eigen::Vector3d temp_gyr_m = Eigen::Vector3d::Zero();
 
-       temp_acc_m << IMU_Msg->linear_acceleration.x, IMU_Msg->linear_acceleration.y, IMU_Msg->linear_acceleration.z;
-       temp_gyr_m << IMU_Msg->angular_velocity.x, IMU_Msg->angular_velocity.y, IMU_Msg->angular_velocity.z;
+    //    temp_acc_m << IMU_Msg->linear_acceleration.x, IMU_Msg->linear_acceleration.y, IMU_Msg->linear_acceleration.z;
+    //    temp_gyr_m << IMU_Msg->angular_velocity.x, IMU_Msg->angular_velocity.y, IMU_Msg->angular_velocity.z;
+
+       tf::vectorMsgToEigen(IMU_Msg.linear_acceleration, temp_acc_m);
+       tf::vectorMsgToEigen(IMU_Msg.angular_velocity, temp_gyr_m);
 
        sum_acc += temp_acc_m;
        sum_gyr += temp_gyr_m;
     }
+
+    // for(int i = 0; i < imu_init_buffer.size(); i++){
+    //     sensor_msgs::ImuConstPtr& msg = imu_init_buffer[i];
+
+    //     Eigen::Vector3d temp_acc_m = Eigen::Vector3d::Zero();
+    //     Eigen::Vector3d temp_gyr_m = Eigen::Vector3d::Zero();
+
+    //     temp_acc_m << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
+    //     temp_gyr_m << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
+
+    //     sum_acc += temp_acc_m;
+    //     sum_gyr += temp_gyr_m;
+    // }
 
     gyr_bias = sum_gyr / imu_init_buffer.size();
     imu_gravity = acc_m / imu_init_buffer.size();
@@ -176,14 +202,18 @@ void MSCK_Filter::gravity_bias_initialization(){
     gravity(3) = -(imu_gravity.norm());
 
     //may have to adjust rotation initalization
-    Eigen::vector3d v = gravity.cross(-imu_gravity);
+    Eigen::Vector3d v = gravity.cross(-imu_gravity);
     double s = v.norm();
     double c = gravity.dot(-imu_gravity);
     Eigen::Matrix3d rotation_c = Eigen::Matrix3d::Identity() + skew_symmetric(v) + (skew_symmetric(v))*(skew_symmetric(v))*((1 - c) / s*s);
-    rotation_q = Eigen::Quaternion::Quaternion(rotation_c);
+    //rotation_q = Eigen::Quaternion::Quaternion(rotation_c);
+    Eigen::Quaternionf q;
+    q = rotation_c;
+    rotation_q = q;
+    //rotation_q = Eigen::Quarternionf
 }
 
-void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc){
+void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyr, const Eigen::Vector3d& acc){
     //IMU Quaternion Integration (0th Order)
     double gyr_norm = gyr.norm(); //get magnitude of gyro
     Eigen::Matrix4d omega = Eigen::Matrix4d::Zero();
@@ -194,6 +224,7 @@ void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gy
     //Integrate quaternion differently depending on size of gyr
     //Very small gyr will cause numerically instability
     Eigen::Quaternionf q_t_dt;
+    Eigen::Quaternionf q_t_dt2;
     if(gyr_norm > 1e-5) { //tune this parameter, current parameter taken from existing implementation
        //Use standard zero-th order integrator
        q_t_dt = (cos(gyr_norm * 0.5 * dt)*Eigen::Matrix4d::Identity() + 
@@ -207,8 +238,8 @@ void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gy
        q_t_dt2 = (Eigen::Matrix4d::Identity() + 0.25*dt*omega)*rotation_q;
     }
 
-    C_dt_transpose = q_t_dt.normalize().toRotationMatrix().transpose();
-    C_dt2_transpose = q_t_dt2.normalize().toRotationMatrix().transpose();
+    Eigen::Matrix3d C_dt_transpose = q_t_dt.normalized().toRotationMatrix().transpose();
+    Eigen::Matrix3d C_dt2_transpose = q_t_dt2.normalized().toRotationMatrix().transpose();
 
     Eigen::Vector3d k_1_v = C_dt_transpose*acc + gravity;
     Eigen::Vector3d k_1_p = imu_vel;
@@ -230,13 +261,15 @@ void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gy
     return;
 }
 
-//Maybe put in separate util file?
-Eigen::Matrix3d skew_symmetric(const Eigen::Vector3d& vec){
-    Eigen::Matrix3d vec_skew;
-    vec_skew << 0, -vec(2), vec(1),
-                vec(2), 0, -vec(0),
-                -vec(1), vec(0), 0;
-    return vec_skew;
+    //Maybe put in separate util file?
+    Eigen::Matrix3d skew_symmetric(const Eigen::Vector3d& vec){
+        Eigen::Matrix3d vec_skew;
+        vec_skew << 0, -vec(2), vec(1),
+                    vec(2), 0, -vec(0),
+                    -vec(1), vec(0), 0;
+        return vec_skew;
+    }
+
 }
 
 // void MSCK_Filter::odom_Callback(const nav_msgs::Odometry &msg) {
@@ -266,99 +299,99 @@ Eigen::Matrix3d skew_symmetric(const Eigen::Vector3d& vec){
 //     std::cout << "filter-based position of the drone: " << x(0) << "," << x(1) << "," << x(2) << "," << t_0 << std::endl;
 // }
 
-void MSCK_Filter::Iterated_Extended_Kalman_Filter(){
-    //Jacobian Calculations
-    motion_model_Jacobian();
-    motion_noise_Jacobian();
-    observation_model_Jacobian();
-    observation_noise_Jacobian();
-    //Prediction Step
-    state_prediction();
-    covariance_prediction();
-    xo = xp;
-    int i = 0;
-    while (i<20){
-    xo = x;   
-    observation_model_Jacobian_O();
-    observation_noise_Jacobian_O();
-    //Kalman Gain
-    kalman_gain();
-    //Correction Step
-    covariance_correction_I();
-    state_correction_I();
-    i++;
-    }
-    }
-void MSCK_Filter::state_prediction(){
-       xp   << (x(0) + cos(x(2))*u(0)*dt),
-               (x(1) + sin(x(2))*u(0)*dt),
-               (x(2) + u(1)*dt);
-       xp(2) = std::fmod(xp(2) + M_PI, 2.0 * M_PI) - M_PI;
-}
-void MSCK_Filter::covariance_prediction(){
-       Pp = F * P * F.transpose() + Qp;
-}
-void MSCK_Filter::kalman_gain(){
-       K = Pp * G.transpose() * (G * Pp * G.transpose() + Rp).inverse();
-}
-void MSCK_Filter::state_correction(){
-       yp   <<(sqrt((xp(0)*xp(0))+(xp(1))*(xp(1)))), 
-              (std::atan2(-xp(1),-xp(0)) - xp(2)); 
-           // Ensure yp(1) is in the range [-pi, pi]
-       if (yp(1) < -M_PI) {
-           yp(1) += 2 * M_PI;
-       } else if (yp(1) > M_PI) {
-           yp(1) -= 2 * M_PI;
-       }
+// void MSCK_Filter::Iterated_Extended_Kalman_Filter(){
+//     //Jacobian Calculations
+//     motion_model_Jacobian();
+//     motion_noise_Jacobian();
+//     observation_model_Jacobian();
+//     observation_noise_Jacobian();
+//     //Prediction Step
+//     state_prediction();
+//     covariance_prediction();
+//     xo = xp;
+//     int i = 0;
+//     while (i<20){
+//     xo = x;   
+//     observation_model_Jacobian_O();
+//     observation_noise_Jacobian_O();
+//     //Kalman Gain
+//     kalman_gain();
+//     //Correction Step
+//     covariance_correction_I();
+//     state_correction_I();
+//     i++;
+//     }
+//     }
+// void MSCK_Filter::state_prediction(){
+//        xp   << (x(0) + cos(x(2))*u(0)*dt),
+//                (x(1) + sin(x(2))*u(0)*dt),
+//                (x(2) + u(1)*dt);
+//        xp(2) = std::fmod(xp(2) + M_PI, 2.0 * M_PI) - M_PI;
+// }
+// void MSCK_Filter::covariance_prediction(){
+//        Pp = F * P * F.transpose() + Qp;
+// }
+// void MSCK_Filter::kalman_gain(){
+//        K = Pp * G.transpose() * (G * Pp * G.transpose() + Rp).inverse();
+// }
+// void MSCK_Filter::state_correction(){
+//        yp   <<(sqrt((xp(0)*xp(0))+(xp(1))*(xp(1)))), 
+//               (std::atan2(-xp(1),-xp(0)) - xp(2)); 
+//            // Ensure yp(1) is in the range [-pi, pi]
+//        if (yp(1) < -M_PI) {
+//            yp(1) += 2 * M_PI;
+//        } else if (yp(1) > M_PI) {
+//            yp(1) -= 2 * M_PI;
+//        }
 
-       std::cout << "yp " << yp(0) <<" , " << yp(1)<< std::endl;
-       std::cout << "y " << y(0) <<" , " << y(1)<< std::endl;
-       x = xp + K * (y - yp);
-}
-void MSCK_Filter::state_correction_I(){
-       yo   <<(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), 
-              (std::atan2(-xo(1),-xo(0)) - xo(2)); 
-           // Ensure yp(1) is in the range [-pi, pi]
-       if (yo(1) < -M_PI) {
-           yo(1) += 2 * M_PI;
-       } else if (yo(1) > M_PI) {
-           yo(1) -= 2 * M_PI;
-       }
+//        std::cout << "yp " << yp(0) <<" , " << yp(1)<< std::endl;
+//        std::cout << "y " << y(0) <<" , " << y(1)<< std::endl;
+//        x = xp + K * (y - yp);
+// }
+// void MSCK_Filter::state_correction_I(){
+//        yo   <<(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), 
+//               (std::atan2(-xo(1),-xo(0)) - xo(2)); 
+//            // Ensure yp(1) is in the range [-pi, pi]
+//        if (yo(1) < -M_PI) {
+//            yo(1) += 2 * M_PI;
+//        } else if (yo(1) > M_PI) {
+//            yo(1) -= 2 * M_PI;
+//        }
 
-       std::cout << "yp " << yo(0) <<" , " << yo(1)<< std::endl;
-       std::cout << "y " << y(0) <<" , " << y(1)<< std::endl;
-       x = xp + K * (y - yo - G*(xp - xo));
-}
-void MSCK_Filter::covariance_correction(){
-       P = (I - K * G) * Pp;
-}
-void MSCK_Filter::covariance_correction_I(){
-       P = (I - K * G) * Pp;
-}
-void MSCK_Filter::motion_model_Jacobian(){
-   F   << 1, 0, (-sin(x(2))*u(0)*dt),
-          0, 1, (cos(x(2))*u(0)*dt),
-          0, 0, 1;
-}
-void MSCK_Filter::motion_noise_Jacobian(){
-   wp   <<  cos(x(2)), 0,
-            sin(x(2)), 0,
-            0,         1;
-   Qp = dt*dt * wp * Q * wp.transpose();
-}
-void MSCK_Filter::observation_model_Jacobian(){
-   G   << (x(0))/(sqrt((x(0)*x(0))+(x(1))*(x(1)))), (x(1))/(sqrt((x(0)*x(0))+(x(1))*(x(1)))), 0,
-          (-x(1))/(sqrt((x(0)*x(0))+(x(1))*(x(1)))), (x(0))/(sqrt((x(0)*x(0))+(x(1))*(x(1)))), -1;
-}
-void MSCK_Filter::observation_model_Jacobian_O(){
-   G   << (xo(0))/(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), (xo(1))/(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), 0,
-          (-xo(1))/(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), (xo(0))/(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), -1;
-}
-void MSCK_Filter::observation_noise_Jacobian(){
-   Rp = R;
-}
-void MSCK_Filter::observation_noise_Jacobian_O(){
-   Rp = R;
-}
-}
+//        std::cout << "yp " << yo(0) <<" , " << yo(1)<< std::endl;
+//        std::cout << "y " << y(0) <<" , " << y(1)<< std::endl;
+//        x = xp + K * (y - yo - G*(xp - xo));
+// }
+// void MSCK_Filter::covariance_correction(){
+//        P = (I - K * G) * Pp;
+// }
+// void MSCK_Filter::covariance_correction_I(){
+//        P = (I - K * G) * Pp;
+// }
+// void MSCK_Filter::motion_model_Jacobian(){
+//    F   << 1, 0, (-sin(x(2))*u(0)*dt),
+//           0, 1, (cos(x(2))*u(0)*dt),
+//           0, 0, 1;
+// }
+// void MSCK_Filter::motion_noise_Jacobian(){
+//    wp   <<  cos(x(2)), 0,
+//             sin(x(2)), 0,
+//             0,         1;
+//    Qp = dt*dt * wp * Q * wp.transpose();
+// }
+// void MSCK_Filter::observation_model_Jacobian(){
+//    G   << (x(0))/(sqrt((x(0)*x(0))+(x(1))*(x(1)))), (x(1))/(sqrt((x(0)*x(0))+(x(1))*(x(1)))), 0,
+//           (-x(1))/(sqrt((x(0)*x(0))+(x(1))*(x(1)))), (x(0))/(sqrt((x(0)*x(0))+(x(1))*(x(1)))), -1;
+// }
+// void MSCK_Filter::observation_model_Jacobian_O(){
+//    G   << (xo(0))/(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), (xo(1))/(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), 0,
+//           (-xo(1))/(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), (xo(0))/(sqrt((xo(0)*xo(0))+(xo(1))*(xo(1)))), -1;
+// }
+// void MSCK_Filter::observation_noise_Jacobian(){
+//    Rp = R;
+// }
+// void MSCK_Filter::observation_noise_Jacobian_O(){
+//    Rp = R;
+// }
+
 // namespace Kalman
