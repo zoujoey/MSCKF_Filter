@@ -1,6 +1,7 @@
 #include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 #include <memory>
+#include <vector>
 #include <cmath>
 #include <math_utils.h>
 #include <sensor_msgs/Imu.h>
@@ -32,7 +33,11 @@ class MSCK_Filter {
   Eigen::VectorXd imu_vel; //Velocity of IMU
   Eigen::VectorXd acc_bias; //Accelerometer Bias
   Eigen::VectorXd imu_pos; //Position of IMU Frame wrt to Global Frame
+  std::vector<sensor_msgs::Imu> imu_init_buffer;
 
+  //Gravity 
+  Eigen::Vector3d gravity;
+  bool is_gravity_init;
 
   //Camera Pose State Vectors
   Eigen::VectorXd cam_state; //CAMERA STATE VECTOR (Stores all Camera Poses Needed (up to N-max))
@@ -94,8 +99,11 @@ class MSCK_Filter {
   void init();
   //void odom_Callback(const nav_msgs::Odometry &msg);
   void IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg);
-  void propagate_imu(const Vector3d& acc_m, const Vector3d& gyr_m);
+  void propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m);
+  void imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc);
   Eigen::Matrix3d skew_symmetric(const Vector3d& vec);
+  void gravity_bias_initialization();
+  
 
   //Old Functions
   void Iterated_Extended_Kalman_Filter();

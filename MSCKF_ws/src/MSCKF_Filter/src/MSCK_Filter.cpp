@@ -29,7 +29,8 @@ void MSCK_Filter::init(){
   cam_pos = Eigen::VectorXd::Zero(7*N);//Camera State Position Recent
 
   gravity = Eigen::Vector3d::Zero(); //Initialize gravity vector, set value later
-  
+  is_gravity_init = false;
+
   F.resize(15,15) // Error State Jacobian
   F = << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //2
@@ -91,7 +92,19 @@ void MSCK_Filter::IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg){
     acc_m << IMU_Msg->linear_acceleration.x, IMU_Msg->linear_acceleration.y, IMU_Msg->linear_acceleration.z;
     gyr_m << IMU_Msg->angular_velocity.x, IMU_Msg->angular_velocity.y, IMU_Msg->angular_velocity.z;
 
-    propagate_imu(acc_m, gyr_m);
+    if(!is_gravity_init){
+       imu_init_buffer.push_back(*IMU_Msg);
+       if(imu_init_buffer.size() < 200){
+           return;
+       }
+       else{
+           gravity_bias_initialization();
+           is_gravity_init = true;
+       }
+    }
+    else{
+       propagate_imu(acc_m, gyr_m);
+    }
 }
 
 void MSCK_Filter::propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m){
@@ -140,7 +153,37 @@ void MSCK_Filter::propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vecto
     //Other Stuff
 }
 
-void imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc){
+void MSCK_Filter::gravity_bias_initialization(){
+    Eigen::Vector3d sum_gyro = Eigen::Vector3d::Zero();
+    Eigen::Vector3d sum_acc = Eigen::Vector3d::Zero();
+    Eigen::Vector3d imu_gravity = Eigen::Vector3d::Zero();
+
+    for(const auto& IMU_Msg : imu_init_buffer){
+       Eigen::Vector3d temp_acc_m = Eigen::Vector3d::Zero();
+       Eigen::Vector3d temp_gyr_m = Eigen::Vector3d::Zero();
+
+       temp_acc_m << IMU_Msg->linear_acceleration.x, IMU_Msg->linear_acceleration.y, IMU_Msg->linear_acceleration.z;
+       temp_gyr_m << IMU_Msg->angular_velocity.x, IMU_Msg->angular_velocity.y, IMU_Msg->angular_velocity.z;
+
+       sum_acc += temp_acc_m;
+       sum_gyr += temp_gyr_m;
+    }
+
+    gyr_bias = sum_gyr / imu_init_buffer.size();
+    imu_gravity = acc_m / imu_init_buffer.size();
+    
+
+    gravity(3) = -(imu_gravity.norm());
+
+    //may have to adjust rotation initalization
+    Eigen::vector3d v = gravity.cross(-imu_gravity);
+    double s = v.norm();
+    double c = gravity.dot(-imu_gravity);
+    Eigen::Matrix3d rotation_c = Eigen::Matrix3d::Identity() + skew_symmetric(v) + (skew_symmetric(v))*(skew_symmetric(v))*((1 - c) / s*s);
+    rotation_q = Eigen::Quaternion::Quaternion(rotation_c);
+}
+
+void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc){
     //IMU Quaternion Integration (0th Order)
     double gyr_norm = gyr.norm(); //get magnitude of gyro
     Eigen::Matrix4d omega = Eigen::Matrix4d::Zero();
