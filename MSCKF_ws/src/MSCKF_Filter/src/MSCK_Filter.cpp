@@ -19,7 +19,7 @@ void MSCK_Filter::init(){
   rotation_q = Eigen::Quaternion::Identity();
   rotation_matrix.resize(3,3);//Rotational Matrix of Quaternion
   //Rotate when needed during IMU propagation
-  //rotation_matrix = rotation_q.normalized().toRotationMatrix();
+  //rotation_matrix = rotation_q.normalize().toRotationMatrix();
   gyr_bias = Eigen::VectorXd::Zero(3);//Gyrscope Bias
   imu_vel = Eigen::VectorXd::Zero(3);//Velocity Vector
   acc_bias = Eigen::VectorXd::Zero(3);//Accelerometer Bias
@@ -28,7 +28,7 @@ void MSCK_Filter::init(){
   cam_q = Eigen::VectorXd::Zero(7*N);//Camera State Rotation Recent
   cam_pos = Eigen::VectorXd::Zero(7*N);//Camera State Position Recent
 
-
+  gravity = Eigen::Vector3d::Zero(); //Initialize gravity vector, set value later
   
   F.resize(15,15) // Error State Jacobian
   F = << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //1
@@ -98,7 +98,7 @@ void MSCK_Filter::propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vecto
     Eigen::Vector3d acc = acc_m - acc_bias;
     Eigen::Vector3d gyr = gyr_m - gyr_bias;
 
-    Eigen::Matrix3d rotation_matrix = rotation_q.normalized().toRotationMatrix();
+    Eigen::Matrix3d rotation_matrix = rotation_q.normalize().toRotationMatrix();
 
     //Transition (F) and Noise (G) Matrix
     //We assume planet rotation is negligible (w_g = 0)
@@ -120,10 +120,71 @@ void MSCK_Filter::propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vecto
     Eigen::MatrixXd F_2 = F*F;
     Eigen::MatrixXd F_3 = F*F*F;
     phi = Eigen::MatrixXd::Identity() + F*dt + (1/2)*F_2*dt*dt + (1/6)*F_3*dt*dt*dt;
+    //Discrete Time Noise Covariance Matrix Qk
+    Eigen::MatrixXd Qk = phi*G*Q*G*phi.transpose()*dt;
+    //Covariance Propagation for IMU
+    Eigen::MatrixXd Pii_1 = phi*Pii*phi.transpose()+Qk;
+    //Total Covariance Propagation
+    Eigen::MatrixXd P_1;
+    P.resize(15+6*N, 15+6*N) 
+    P_1.block<15,15>(0,0) = Pii_1;
+    P_1.block<6*N,15>(15,0) = (P.block<6*N,15>(15,0))*phi.transpose();
+    P_1.block<15,6*N>(0,15) = phi*(P.block<15,6*N>(0,15));
+    P_1.block<6*N,6*N>(15,15) = P.block<6*N,6*N>(15,15);
+    P_1 = (P_1+P_1.transpose())*0.5;
+
+    imu_state_estimate(dt, gyr, acc);    
 
     //TODO:
     //State propagation with runge kutta
     //Other Stuff
+}
+
+void imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc){
+    //IMU Quaternion Integration (0th Order)
+    double gyr_norm = gyr.norm(); //get magnitude of gyro
+    Eigen::Matrix4d omega = Eigen::Matrix4d::Zero();
+    omega.block<3,3>(0,0) = -skew_symmetric(gyr);
+    omega.block<3,1>(0,3) = gyr;
+    omega.block<1,3>(3,0) = -gyr;
+
+    //Integrate quaternion differently depending on size of gyr
+    //Very small gyr will cause numerically instability
+    Eigen::Quaternion q_t_dt;
+    if(gyr_norm > 1e-5) { //tune this parameter, current parameter taken from existing implementation
+       //Use standard zero-th order integrator
+       q_t_dt = (cos(gyr_norm * 0.5 * dt)*Eigen::Matrix4d::Identity() + 
+              (1/gyr_norm)*sin(gyr_norm*0.5*dt)*omega)*rotation_q;
+       q_t_dt2 = (cos(gyr_norm*0.25*dt)*Eigen::Matrix4d::Identity() + 
+              (1/gyr_norm)*sin(gyr_norm*0.25*dt)*omega)*rotation_q;
+    }
+    else{
+       //Use version as gyr -> 0
+       q_t_dt = (Eigen::Matrix4d::Identity() + 0.5*dt*omega)*rotation_q;
+       q_t_dt2 = (Eigen::Matrix4d::Identity() + 0.25*dt*omega)*rotation_q;
+    }
+
+    C_dt_transpose = q_t_dt.normalize().toRotationMatrix().transpose();
+    C_dt2_transpose = q_t_dt2.normalize().toRotationMatrix().transpose();
+
+    Eigen::Vector3d k_1_v = C_dt_transpose*acc + gravity;
+    Eigen::Vector3d k_1_p = imu_vel;
+
+    Eigen::Vector3d k_2_v = C_dt2_transpose*acc + gravity;
+    Eigen::Vector3d k_2_p = imu_vel + k_1_v*(dt/2);
+
+    Eigen::Vector3d k_3_v = C_dt2_transpose*acc + gravity;
+    Eigen::Vector3d k_3_p = imu_vel + k_2_v*(dt/2);
+
+    Eigen::Vector3d k_4_v = C_dt_transpose*acc + gravity;
+    Eigen::Vector3d k_4_p = imu_vel + k_3_v*(dt/2);
+
+    rotation_q = q_t_dt;
+    rotation_q.normalize();
+    imu_vel = imu_vel + (dt/6)*(k_1_v + 2*k_2_v + 2*k_3_v + k_4_v);
+    imu_pos = imu_pos + (dt/6)*(k_1_p + 2*k_2_p + 2*k_3_p + k_4_p);
+
+    return;
 }
 
 //Maybe put in separate util file?
