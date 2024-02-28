@@ -29,7 +29,7 @@ class MSCK_Filter {
   Eigen::VectorXd x; //OVERALL STATE VECTOR
   //IMU State Vectors
   Eigen::VectorXd x_imu; //IMU STATE VECTOR (Combination of Vectors Below)
-  Eigen::Quaternionf rotation_q; //Rotation Quaternion of IMU Frame wrt to Global Frame   
+  Eigen::Quaterniond rotation_q; //Rotation Quaternion of IMU Frame wrt to Global Frame   
   Eigen::MatrixXd rotation_matrix; //Rotational Matrix of Quaternion
   Eigen::VectorXd gyr_bias; //Gyroscope Bias
   Eigen::VectorXd imu_vel; //Velocity of IMU

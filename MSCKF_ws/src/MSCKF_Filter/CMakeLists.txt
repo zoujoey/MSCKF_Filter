@@ -19,6 +19,8 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   tf
+  tf_conversions
+  eigen_conversions
 )
 
 find_package(OpenCV REQUIRED)
@@ -44,4 +46,5 @@ add_executable(MSCK_Filter
 target_link_libraries(MSCK_Filter
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  ${PCL_LIBRARIES})
+  ${PCL_LIBRARIES}
+  )

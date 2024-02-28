@@ -17,7 +17,7 @@ void MSCK_Filter::init(){
   // Initialize Prior Estimates
   x = Eigen::VectorXd::Zero(16+7*N); // State Posterior Vector
   x_imu = Eigen::VectorXd::Zero(16); //Imu State Vector
-  rotation_q = Eigen::Quaternionf::Identity();
+  rotation_q = Eigen::Quaterniond::Identity();
   rotation_matrix.resize(3,3);//Rotational Matrix of Quaternion
   //Rotate when needed during IMU propagation
   //rotation_matrix = rotation_q.normalize().toRotationMatrix();
@@ -157,10 +157,6 @@ void MSCK_Filter::propagate_imu(const Eigen::Vector3d& acc_m, const Eigen::Vecto
     P_1 = (P_1+P_1.transpose())*0.5;
 
     imu_state_estimate(dt, gyr, acc);    
-
-    //TODO:
-    //State propagation with runge kutta
-    //Other Stuff
 }
 
 void MSCK_Filter::gravity_bias_initialization(){
@@ -172,28 +168,12 @@ void MSCK_Filter::gravity_bias_initialization(){
        Eigen::Vector3d temp_acc_m = Eigen::Vector3d::Zero();
        Eigen::Vector3d temp_gyr_m = Eigen::Vector3d::Zero();
 
-    //    temp_acc_m << IMU_Msg->linear_acceleration.x, IMU_Msg->linear_acceleration.y, IMU_Msg->linear_acceleration.z;
-    //    temp_gyr_m << IMU_Msg->angular_velocity.x, IMU_Msg->angular_velocity.y, IMU_Msg->angular_velocity.z;
-
        tf::vectorMsgToEigen(IMU_Msg.linear_acceleration, temp_acc_m);
        tf::vectorMsgToEigen(IMU_Msg.angular_velocity, temp_gyr_m);
 
        sum_acc += temp_acc_m;
        sum_gyr += temp_gyr_m;
     }
-
-    // for(int i = 0; i < imu_init_buffer.size(); i++){
-    //     sensor_msgs::ImuConstPtr& msg = imu_init_buffer[i];
-
-    //     Eigen::Vector3d temp_acc_m = Eigen::Vector3d::Zero();
-    //     Eigen::Vector3d temp_gyr_m = Eigen::Vector3d::Zero();
-
-    //     temp_acc_m << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
-    //     temp_gyr_m << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
-
-    //     sum_acc += temp_acc_m;
-    //     sum_gyr += temp_gyr_m;
-    // }
 
     gyr_bias = sum_gyr / imu_init_buffer.size();
     imu_gravity = acc_m / imu_init_buffer.size();
@@ -206,11 +186,8 @@ void MSCK_Filter::gravity_bias_initialization(){
     double s = v.norm();
     double c = gravity.dot(-imu_gravity);
     Eigen::Matrix3d rotation_c = Eigen::Matrix3d::Identity() + skew_symmetric(v) + (skew_symmetric(v))*(skew_symmetric(v))*((1 - c) / s*s);
-    //rotation_q = Eigen::Quaternion::Quaternion(rotation_c);
-    Eigen::Quaternionf q;
-    q = rotation_c;
-    rotation_q = q;
-    //rotation_q = Eigen::Quarternionf
+    rotation_q = Eigen::Quaterniond(rotation_c);
+
 }
 
 void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyr, const Eigen::Vector3d& acc){
@@ -223,20 +200,30 @@ void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gy
 
     //Integrate quaternion differently depending on size of gyr
     //Very small gyr will cause numerically instability
-    Eigen::Quaternionf q_t_dt;
-    Eigen::Quaternionf q_t_dt2;
+    Eigen::Quaterniond q_t_dt;
+    Eigen::Quaterniond q_t_dt2;
+
+    Eigen::Vector4d q_t_vec;
+    Eigen::Vector4d q2_t_vec;
+    Eigen::Vector4d q_vec;
+    q_vec << rotation_q.w(), rotation_q.x(), rotation_q.y(), rotation_q.z();
+    //Eigen::Vector4d q2_vec;
+
     if(gyr_norm > 1e-5) { //tune this parameter, current parameter taken from existing implementation
        //Use standard zero-th order integrator
-       q_t_dt = (cos(gyr_norm * 0.5 * dt)*Eigen::Matrix4d::Identity() + 
-              (1/gyr_norm)*sin(gyr_norm*0.5*dt)*omega)*rotation_q;
-       q_t_dt2 = (cos(gyr_norm*0.25*dt)*Eigen::Matrix4d::Identity() + 
-              (1/gyr_norm)*sin(gyr_norm*0.25*dt)*omega)*rotation_q;
+       q_t_vec = (cos(gyr_norm * 0.5 * dt)*Eigen::Matrix4d::Identity() + 
+              (1/gyr_norm)*sin(gyr_norm*0.5*dt)*omega)*q_vec;
+       q2_t_vec = (cos(gyr_norm*0.25*dt)*Eigen::Matrix4d::Identity() + 
+              (1/gyr_norm)*sin(gyr_norm*0.25*dt)*omega)*q_vec;
     }
     else{
-       //Use version as gyr -> 0
-       q_t_dt = (Eigen::Matrix4d::Identity() + 0.5*dt*omega)*rotation_q;
-       q_t_dt2 = (Eigen::Matrix4d::Identity() + 0.25*dt*omega)*rotation_q;
+       //Use limit version of equation
+       q_t_vec = (Eigen::Matrix4d::Identity() + 0.5*dt*omega)*q_vec;
+       q2_t_vec = (Eigen::Matrix4d::Identity() + 0.25*dt*omega)*q_vec;
     }
+
+    q_t_dt = Eigen::Quaterniond(q_t_vec);
+    q_t_dt2 = Eigen::Quaterniond(q2_t_vec);
 
     Eigen::Matrix3d C_dt_transpose = q_t_dt.normalized().toRotationMatrix().transpose();
     Eigen::Matrix3d C_dt2_transpose = q_t_dt2.normalized().toRotationMatrix().transpose();
@@ -262,7 +249,7 @@ void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gy
 }
 
     //Maybe put in separate util file?
-    Eigen::Matrix3d skew_symmetric(const Eigen::Vector3d& vec){
+    Eigen::Matrix3d MSCK_Filter::skew_symmetric(const Eigen::Vector3d& vec){
         Eigen::Matrix3d vec_skew;
         vec_skew << 0, -vec(2), vec(1),
                     vec(2), 0, -vec(0),
