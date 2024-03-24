@@ -1,0 +1,5 @@
+<launch>
+    <node name="rviz" type="rviz" pkg="rviz" args="-d $(find MSCKF_Filter)/rviz/euroc.rviz"/>
+
+    <node name="main_MSCKfilter" pkg="MSCKF_Filter" type="main_MSCKfilter" output="screen"/>
+</launch>
