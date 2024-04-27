@@ -120,7 +120,7 @@ void MSCK_Filter::IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg){
     acc_m << IMU_Msg->linear_acceleration.x, IMU_Msg->linear_acceleration.y, IMU_Msg->linear_acceleration.z;
     gyr_m << IMU_Msg->angular_velocity.x, IMU_Msg->angular_velocity.y, IMU_Msg->angular_velocity.z;
 
-    double imu_time = IMU_Msg->header.stamp.sec;
+    double imu_time = IMU_Msg->header.stamp.toSec();
 
     if(!is_gravity_init){
        imu_init_buffer.push_back(*IMU_Msg);
@@ -137,12 +137,12 @@ void MSCK_Filter::IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg){
 
     if(imu_first_data){
         imu_first_data = false;
-        imu_last_time = imu_current_time;
+        imu_last_time = imu_time;
         return;
     }
 
-    imu_dt = imu_current_time - imu_last_time;
-    imu_last_time = imu_current_time;
+    imu_dt = imu_time - imu_last_time;
+    imu_last_time = imu_time;
 }
 
 void MSCK_Filter::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m){
@@ -171,7 +171,7 @@ void MSCK_Filter::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const E
 
     G.resize(15,12);
 
-    ROS_INFO("Done F and G Blocks");
+    //ROS_INFO("Done F and G Blocks");
 
     Eigen::MatrixXd I_15 = Eigen::MatrixXd::Identity(15,15);
 
@@ -179,7 +179,7 @@ void MSCK_Filter::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const E
     //Approximate Matrix Exponential Using Taylor Series
     //3rd Order For Now
 
-    ROS_INFO("Starting State Transition");
+    //ROS_INFO("Starting State Transition");
     Eigen::MatrixXd F_2 = F*F;
     Eigen::MatrixXd F_3 = F*F*F;
     phi = I_15 + F*dt + (1/2)*F_2*dt*dt + (1/6)*F_3*dt*dt*dt;
@@ -192,25 +192,17 @@ void MSCK_Filter::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const E
 
     int temp = 6*N;
 
-    ROS_INFO("Resizing P Matrix");
-    ROS_INFO("1");
-    P.resize(15+6*N, 15+6*N);
-    ROS_INFO("2");
-    P_1.block<15,15>(0,0) = Pii_1;
-    ROS_INFO("3");
-    P_1.block(15, 0, temp, 15) = (P.block(15,0, temp, 15))*phi.transpose();
-    ROS_INFO("4");
-    P_1.block(15, 0, 15, temp) = phi*(P.block(0,15,15,temp));
-    ROS_INFO("5");
-    P_1.block(15,15, temp, temp) = P.block(15, 15, temp, temp);
-    ROS_INFO("6");
-    P_1 = (P_1+P_1.transpose())*0.5;
+    P.block<15,15>(0,0) = Pii_1;
+    P.block(15, 0, temp, 15) = (P.block(15,0, temp, 15))*phi.transpose();
+    P.block(0, 15, 15, temp) = phi*(P.block(0,15,15,temp));
+    P_1 = (P + P.transpose())*0.5;
+    P = P_1;
 
     ROS_INFO("Starting IMU State Estimate");
 
     imu_state_estimate(dt, gyr, acc);   
 
-    std::cout << "Position: x = " << imu_pos(0) << ", y = " << imu_pos(1) << ", z = " << imu_pos(2) << std::endl;
+    //std::cout << "Position: x = " << imu_pos(0) << ", y = " << imu_pos(1) << ", z = " << imu_pos(2) << std::endl;
 
     publishOdom(); 
 }
@@ -239,6 +231,9 @@ void MSCK_Filter::gravity_bias_initialization(){
     ROS_INFO("Set gravity");
     gravity(2) = -(imu_gravity.norm());
 
+    std::cout << "Gyr Bias: " << gyr_bias << std::endl;
+    std::cout << "Gravity: " << gravity << std::endl;
+
     //may have to adjust rotation initalization
     Eigen::Vector3d v = gravity.cross(-imu_gravity);
     double s = v.norm();
@@ -252,6 +247,7 @@ void MSCK_Filter::gravity_bias_initialization(){
 
 void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyr, const Eigen::Vector3d& acc){
     //IMU Quaternion Integration (0th Order)
+    std::cout << "Linear Acc: " << acc << std::endl;
     double gyr_norm = gyr.norm(); //get magnitude of gyro
     Eigen::Matrix4d omega = Eigen::Matrix4d::Zero();
     omega.block<3,3>(0,0) = -skew_symmetric(gyr);
@@ -304,6 +300,13 @@ void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gy
     imu_vel = imu_vel + (dt/6)*(k_1_v + 2*k_2_v + 2*k_3_v + k_4_v);
     imu_pos = imu_pos + (dt/6)*(k_1_p + 2*k_2_p + 2*k_3_p + k_4_p);
 
+    //ROS_INFO("IMU Vel X: %d");
+    std::cout << "dt: " << dt << std::endl;
+    std::cout << "Position: x = " << imu_pos(0) << ", y = " << imu_pos(1) << ", z = " << imu_pos(2) << std::endl;
+    std::cout << "Velocity: x = " << imu_vel(0) << ", y = " << imu_vel(1) << ", z = " << imu_vel(2) << std::endl;
+
+    
+
     return;
 }
 
@@ -317,15 +320,6 @@ void MSCK_Filter::publishOdom(){
     imu_odom.pose.pose.orientation.y = rotation_q.y();
     imu_odom.pose.pose.orientation.z = rotation_q.z();
     imu_odom.pose.pose.orientation.w = rotation_q.w();
-
-    // imu_odom.pose.pose.position.x = 1;
-    // imu_odom.pose.pose.position.y = 1;
-    // imu_odom.pose.pose.position.z = 1;
-
-    // imu_odom.pose.pose.orientation.x = 1;
-    // imu_odom.pose.pose.orientation.y = 1;
-    // imu_odom.pose.pose.orientation.z = 1;
-    // imu_odom.pose.pose.orientation.w = 1;
 
     odom_pub.publish(imu_odom);
 }
