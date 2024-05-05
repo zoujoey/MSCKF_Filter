@@ -19,16 +19,31 @@ class MSCK_Filter {
   MSCK_Filter()
       : MSCK_Filter(ros::NodeHandle(), ros::NodeHandle("~")) {}
   ~MSCK_Filter() {}
-
+  struct FeaturePosition {
+    int maxCorners;
+    Eigen::Vector2d cam_pose;
+    Eigen::Vector 
+  };
 
   //main functions
   void init();
   void publishOdom();
+  //IMU Callback/Propagation Functions
   void IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg);
   void propagate_imu(double dt, const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m);
   void imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc);
+  //Camera Callback/Augmentation Functions
+  void CAM_Callback(const nav_msgs::Image::ConstPtr& CAM_Msg);
+  void Visual_Odometry(const nav_msgs::Image::ConstPtr& CAM_Msg)
+  void state_augmentation();
+  void covariance_augmentation();
+  //MSCKF Update Step Function
+  void MSCKF_Update();
+  void Feature_Collapse();
+  //Helper Functions
   Eigen::Matrix3d skew_symmetric(const Eigen::Vector3d& vec);
   void gravity_bias_initialization();
+
 
   //Prediction Terms
   //State Vector
@@ -48,8 +63,10 @@ class MSCK_Filter {
   bool is_gravity_init;
 
   //Camera Pose State Vectors
+  Eigen::Quaterniond cam_imu_q; //Rotation of IMU to Camera
+  Eigen::VectorXd cam_imu_pose; //Translation of IMU to Camera
   Eigen::VectorXd cam_state; //CAMERA STATE VECTOR (Stores all Camera Poses Needed (up to N-max))
-  Eigen::VectorXd cam_q; //Most Recent Quaternion of Camera wrt to Global Frame
+  Eigen::Quaterniond cam_q; //Most Recent Quaternion of Camera wrt to Global Frame
   Eigen::VectorXd cam_pos; //Most Recent Position of Camera wrt to Global Frame
 
   //State Covariance
@@ -85,6 +102,7 @@ class MSCK_Filter {
   ros::NodeHandle nh_;
   ros::NodeHandle pnh_;
   ros::Subscriber imu_sub;
+  ros::Subscriber cam_sub;
   ros::Publisher odom_pub;
 };
 

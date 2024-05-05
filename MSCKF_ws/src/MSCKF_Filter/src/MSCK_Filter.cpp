@@ -1,13 +1,14 @@
 #include "MSCK_Filter.h"
 
 namespace MSCKalman {
-
+//INITIALIZE
 MSCK_Filter::MSCK_Filter(const ros::NodeHandle &nh,
                                  const ros::NodeHandle &pnh)
     : nh_(nh), pnh_(pnh) {
   imu_sub = nh_.subscribe<sensor_msgs::Imu>("imu0", 1, &MSCK_Filter::IMU_Callback, this);
   ROS_INFO("Subscribe to IMU");
-  //infoSubCAM_ = nh_.subscribe("noisy_pose_topic_CAM", 1, &MSCK_Filter::odom_Callback, this);
+  cam_sub = nh_.subscribe<sensor_msgs::Image>("cam0/image_raw", 1, &MSCK_Filter::CAM_Callback, this);
+  ROS_INFO("Subscribe to CAM");
   odom_pub = nh_.advertise<nav_msgs::Odometry>("imu_odom_pub", 1000);
   ROS_INFO("Publish to imu_odom");
 }
@@ -115,7 +116,7 @@ void MSCK_Filter::init(){
   Q_imu.resize(12,12);
   phi = Eigen::MatrixXd::Zero(15,15);
 }
-
+//CALLBACK FUNCTIONS
 void MSCK_Filter::IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg){
     acc_m << IMU_Msg->linear_acceleration.x, IMU_Msg->linear_acceleration.y, IMU_Msg->linear_acceleration.z;
     gyr_m << IMU_Msg->angular_velocity.x, IMU_Msg->angular_velocity.y, IMU_Msg->angular_velocity.z;
@@ -144,7 +145,18 @@ void MSCK_Filter::IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg){
     imu_dt = imu_time - imu_last_time;
     imu_last_time = imu_time;
 }
-
+void MSCK_Filter::CAM_Callback(const nav_msgs::Image::ConstPtr& CAM_Msg){
+  Visual_Odometry(CAM_Msg);
+  if(is_gravity_init){
+    ROS_INFO("Image Received");
+    state_augmentation();
+    covariance_augmentation();
+    if(feature_finished){
+      MSCKF_Update();
+    }
+  }
+}
+//HELPER FUNCTIONS
 void MSCK_Filter::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m){
     ROS_INFO("Starting Propagate IMU");
     Eigen::Vector3d acc = acc_m - acc_bias;
@@ -304,12 +316,20 @@ void MSCK_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gy
     std::cout << "dt: " << dt << std::endl;
     std::cout << "Position: x = " << imu_pos(0) << ", y = " << imu_pos(1) << ", z = " << imu_pos(2) << std::endl;
     std::cout << "Velocity: x = " << imu_vel(0) << ", y = " << imu_vel(1) << ", z = " << imu_vel(2) << std::endl;
-
-    
-
     return;
 }
+void MSCK_Filter::state_augmentation(){
+    cam_q = 
+}
+void MSCK_Filter::covariance_augmentation(){
 
+}
+void MSCK_Filter::MSCKF_Update(){
+
+}
+void MSCK_Filter::Feature_Collapse(){
+
+}
 void MSCK_Filter::publishOdom(){
     imu_odom.header.frame_id = "world";
     imu_odom.pose.pose.position.x = imu_pos(0);
