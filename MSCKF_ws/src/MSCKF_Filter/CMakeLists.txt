@@ -21,11 +21,14 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf_conversions
   eigen_conversions
-)
+  message_generation
+  )
 
 find_package(OpenCV REQUIRED)
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS message_runtime 
+  )
 
 ###########
 ## Build ##
@@ -36,13 +39,22 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
   ${PCL_INCLUDE_DIRS}
-)
+  )
 
 add_executable(MSCK_Filter
   src/main_MSCKfilter.cpp
   src/MSCK_Filter.cpp
-)
+  )
 
+add_message_files(
+  FILES
+  Feature.msg
+  ImageFeatures.msg
+  )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  )
 target_link_libraries(MSCK_Filter
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}

@@ -6,8 +6,9 @@ MSCKF_Node::MSCKF_Node(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
     : nh_(nh), pnh_(pnh) {
     imu_sub = nh_.subscribe<sensor_msgs::Imu>("imu0", 1, &MSCKF_Node::IMU_Callback, this);
     ROS_INFO("Subscribe to IMU");
-    cam_sub = nh_.subscribe<nav_msgs::Image>("cam0/image_raw", 1, &MSCKF_Node::CAM_Callback, this);
+    image_sub = nh_.subscribe<nav_msgs::Image>("cam0/image_raw", 1, &MSCKF_Node::CAM_Callback, this);
     ROS_INFO("Subscribe to CAM");
+
     msckf_filter.init(); // Call initialization function from MSCKF_Filter
 }
 
@@ -40,26 +41,23 @@ void MSCKF_Node::IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg) {
     imu_last_time = imu_time;
 }
 
-void MSCKF_Node::CAM_Callback(const nav_msgs::Image::ConstPtr& CAM_Msg) {
+void MSCKF_Node::IMAGE_Callback(const nav_msgs::Image::ConstPtr& CAM_Msg) {
     // Implement your camera callback function here
-    Visual_Odometry(CAM_Msg);
 
     if(is_gravity_init){
         ROS_INFO("Image Received");
-        add_Image();
-        state_augmentation();
-        covariance_augmentation();
-        N += 1;
-        if(feature_disappeared){
-        Eigen::Vector2D feature_estimate = feature_collapse(feature);
-        Eigen::Vector2D
-        }
+        addCameraFrame(msg->header.msg);
     }
     publishOdom();
 }
 
-void MSCKF_Node::Feature_Callback() {
+void MSCKF_Node::FEATURE_Callback(const MSCKalman::ImageFeaturesConstPtr &msg) {
     // Implement your feature callback function here
+    auto features = FeatureList{};
+    for (const auto &f : msg->features) {
+        features.push_back(ImageFeature{f.id, {f.position.x, f.position.y}});
+    }
+    addFeatures(msg->image_seq, features);
 }
 
 void MSCKF_Filter::publishOdom() {

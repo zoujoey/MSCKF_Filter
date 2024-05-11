@@ -16,6 +16,7 @@ MSCK_Filter::MSCK_Filter(const ros::NodeHandle &nh,
 
 void MSCK_Filter::init(){
   // Initialize Prior Estimates
+  //TODO ADD FEATURE STUFF
   N = 0; //Number of camera poses
   x = Eigen::VectorXd::Zero(16+7*N); // State Posterior Vector
   x_imu = Eigen::VectorXd::Zero(16); //Imu State Vector
