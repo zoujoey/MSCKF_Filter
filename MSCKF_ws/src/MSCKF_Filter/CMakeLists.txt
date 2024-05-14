@@ -27,7 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(OpenCV REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS message_runtime 
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime 
   )
 
 ###########
@@ -44,17 +44,21 @@ include_directories(
 add_executable(MSCK_Filter
   src/main_MSCKfilter.cpp
   src/MSCK_Filter.cpp
+  src/tracking_nodelet.cpp
   )
 
 add_message_files(
   FILES
   Feature.msg
   ImageFeatures.msg
-  )
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  )
+ )
+  
+ generate_messages(
+   DEPENDENCIES
+   std_msgs
+   geometry_msgs
+ )
+ 
 target_link_libraries(MSCK_Filter
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
