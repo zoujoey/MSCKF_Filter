@@ -1,52 +1,103 @@
-#include "MSCKF_Filter/MSCK_Feature.h"
-#include "MSCKF_Filter/math_utils.h"
+#include "MSCKF_Filter/MSCK_Feature.hpp"
+
 namespace MSCKalman {
 
-Vector3d estimateFeaturePosition(const VectorOfVector2d &measurements,
-                                 const VectorOfMatrix3d &camera_rotation_estimates,
-                                 const VectorOfVector3d &camera_position_estimates,
-                                 VectorXd &residuals) {
-    // We have one feature's measurements in M images and M camera pose estimates in the global frame
+MeasurementModelCostFunction::MeasurementModelCostFunction(
+    const VectorOfVector2d& measurements,
+    const VectorOfMatrix3d& camera_rotations,
+    const VectorOfVector3d& camera_positions)
+    : measurements_(measurements),
+      camera_rotations_(camera_rotations),
+      camera_positions_(camera_positions) {
+    const int num_residuals = measurements.size() * 2; // 2D residuals for each measurement
+    set_num_residuals(num_residuals);
+
+    // Set parameter block size for alpha, beta, rho
+    mutable_parameter_block_sizes()->push_back(3); // Alpha, beta, rho
+}
+
+bool MeasurementModelCostFunction::Evaluate(double const* const* parameters,
+                                            double* residuals,
+                                            double** jacobians) const {
+    const int num_measurements = measurements_.size();
+
+    for (int i = 0; i < num_measurements; ++i) {
+        const Vector2d& z = measurements_[i];
+        const Matrix3d& C = camera_rotations_[i];
+        const Vector3d& p = camera_positions_[i];
+
+        // Calculate h vector
+        Vector3d h = C * Vector3d(parameters[0][0], parameters[0][1], 1) + parameters[0][2] * p;
+
+        // Compute predicted measurement
+        Vector2d predicted_meas = h.head<2>() / h(2);
+
+        // Compute residuals
+        residuals[2 * i] = predicted_meas(0) - z(0);
+        residuals[2 * i + 1] = predicted_meas(1) - z(1);
+
+        // Compute Jacobians if requested
+        if (jacobians != nullptr && jacobians[0] != nullptr) {
+            // Compute Jacobian of residuals w.r.t parameters
+            jacobians[0][2 * i * 3] = C(0, 0) / h(2);
+            jacobians[0][2 * i * 3 + 1] = C(0, 1) / h(2);
+            jacobians[0][2 * i * 3 + 2] = -h(0) * C(0, 0) / (h(2) * h(2)) + h(1) * C(0, 1) / (h(2) * h(2));
+            
+            jacobians[0][(2 * i + 1) * 3] = C(1, 0) / h(2);
+            jacobians[0][(2 * i + 1) * 3 + 1] = C(1, 1) / h(2);
+            jacobians[0][(2 * i + 1) * 3 + 2] = -h(0) * C(1, 0) / (h(2) * h(2)) + h(1) * C(1, 1) / (h(2) * h(2));
+        }
+    }
+
+    return true;
+}
+
+Vector3d estimateFeaturePosition(const VectorOfVector2d& measurements,
+                                 const VectorOfMatrix3d& camera_rotation_estimates,
+                                 const VectorOfVector3d& camera_position_estimates,
+                                 VectorXd& residuals) {
     const auto M = measurements.size();
     assert(M == camera_rotation_estimates.size());
     assert(M == camera_position_estimates.size());
     assert(M > 1);
-
-    /* Follow the approach outlined in the Appendix of Mourikis and Roumeliotis
-     * Put everything in terms of three parameters representing the camera-frame feature position
-     * in just the first camera frame. We estimate these parameters using Levenberg-Marquardt.
-     */
-    auto model = MeasurementModel{measurements, camera_rotation_estimates, camera_position_estimates};
-
-    Eigen::LevenbergMarquardt<MeasurementModel> lm{model};
-
-    // Generate initial guess from first and last feature instance
-    const auto &m1 = measurements.front();
-    const auto &m2 = measurements.back();
-    const auto &R1 = camera_rotation_estimates.front();
-    const auto &R2 = camera_rotation_estimates.back();
-    const auto &p1 = camera_position_estimates.front();
-    const auto &p2 = camera_position_estimates.back();
+    
+    // Initial Guess 
+    const auto& m1 = measurements.front();
+    const auto& m2 = measurements.back();
+    const auto& R1 = camera_rotation_estimates.front();
+    const auto& R2 = camera_rotation_estimates.back();
+    const auto& p1 = camera_position_estimates.front();
+    const auto& p2 = camera_position_estimates.back();
     const auto pos_guess = triangulateFromTwoCameraPoses(m1, m2, R2 * R1.inverse(), R1 * (p2 - p1));
-
-    // Convert this estimated position to the parameters alpha, beta, rho
-    // Note: a dymamic vector seems to make the LevenbergMarquardt compile more happily
     auto params = VectorXd{inverseDepthParams(pos_guess)};
-
+    
+    // Create a Ceres problem
     ceres::Problem problem;
-    for (int i  = 0; i < kNumObservations; ++i) {
-        ceres::CostFunction* cost_function = new AutoDiffCostFunction<MeasurementModel, 1, 1, 1>
-           (data[2 * i], data[2 * i + 1]);
+    
+    for (int i = 0; i < M; ++i) {
+        auto* cost_function = new MeasurementModelCostFunction(measurements, camera_rotation_estimates, camera_position_estimates);
+
+        problem.AddResidualBlock(cost_function,
+                                 nullptr /* loss function */,
+                                 &params[0], &params[1], &params[2]);
     }
 
-    // Convert back to position in global frame
-    auto pos = inverseDepthParams(params);
-    auto global_pos = Vector3d{R1.transpose() * pos + p1};
-
-    // Output the residuals by calling the function used in the optimization
+    // Configure solver options
+    ceres::Solver::Options options;
+    // Configure solver options...
+    
+    // Solve the problem
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
+    
+    // Output the residuals
     residuals.resize(2 * M);
     model(params, residuals);
-
+    
+    // Compute global position
+    auto pos = inverseDepthParams(params);
+    auto global_pos = Vector3d{R1.transpose() * pos + p1};
+    
     return global_pos;
 }
 
@@ -72,74 +123,6 @@ Vector3d triangulateFromTwoCameraPoses(const Vector2d &measurement1,
 
     // Return position in first frame
     return x(0) * dir1;
-}
-
-Vector2d measurementFromPosition(const Vector3d &position) {
-    return position.head<2>() / position(2);
-}
-
-Vector3d MeasurementModel::hFromParams(const Vector3d &x, int i) const {
-    const auto &C = local_rotations_[i];
-    const auto &p = local_positions_[i];
-    return C * Vector3d{x(0), x(1), 1} + x(2) * p;
-}
-
-int MeasurementModel::operator()(const Vector3d &x, VectorXd &fvec) {
-    // Calculate residuals for each feature measurement i = 1..M
-    // Note the residuals are 2D, so length of fvec is 2M.
-
-    for (auto i = 0; i < M; ++i) {
-        const auto &z = measurements_[i];
-
-        // h is the vector of the functions h_i1, h_i2, h_i3 in Mourikis and Roumeliotis
-        auto h = hFromParams(x, i);
-
-        auto meas = measurementFromPosition(h);
-
-        auto error = Vector2d{z - meas};
-        fvec(2 * i) = error(0);
-        fvec(2 * i + 1) = error(1);
-    }
-    return 0;
-}
-
-int MeasurementModel::df(const Vector3d &x, MatrixXd &fjac) {
-    // Calculate the Jacobian in 2*3 blocks for each measurement
-    for (auto i = 0; i < M; ++i) {
-        const auto &C = local_rotations_[i];
-        const auto &p = local_positions_[i];
-        auto h = hFromParams(x, i);
-
-        // Write out the analytical Jacobian
-        // These temporary matrices are just for convenience writing it out
-        Eigen::Matrix<double, 2, 3> J1, J2;
-        J1 << C.topLeftCorner<2, 2>(), p.head<2>();
-        J2 << h(0) * C(2, 0), h(0) * C(2, 1), h(0) * p(2),
-                h(1) * C(2, 0), h(1) * C(2, 1), h(1) * p(2);
-        fjac.block<2, 3>(2 * i, 0) = (-J1 + J2 / h(2)) / h(2);
-    }
-    return 0;
-}
-
-MeasurementModel::MeasurementModel(VectorOfVector2d measurements,
-                                   const VectorOfMatrix3d &camera_rotations,
-                                   const VectorOfVector3d &camera_positions) :
-        Eigen::DenseFunctor<double>{3, static_cast<int>(2 * measurements.size())},
-        M{measurements.size()},
-        measurements_{measurements} {
-    // We have M camera pose estimates in the global frame.
-    assert(M == camera_rotations.size());
-    assert(M == camera_positions.size());
-    local_rotations_.reserve(M);
-    local_positions_.reserve(M);
-
-    // Pre-compute the poses in the frame of the first camera pose
-    for (auto i = 0; i < M; ++i) {
-        // Get rotation from 1st frame to ith frame
-        local_rotations_.emplace_back(camera_rotations[i] * camera_rotations[0].transpose());
-        // Get translation from 1st frame to ith frame
-        local_positions_.emplace_back(camera_rotations[i] * (camera_positions[i] - camera_positions[0]));
-    }
 }
 
 } // namespace MSCKalman

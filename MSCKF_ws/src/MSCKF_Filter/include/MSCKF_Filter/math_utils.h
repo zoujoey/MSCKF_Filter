@@ -1,7 +1,7 @@
 #ifndef MSCKF_UTIL_HPP
 #define MSCKF_UTIL_HPP
 
-#include "MSCKF_Filter/MSCK_Types.h"
+#include "MSCK_Types.h"
 
 namespace msckf {
 //Eulerian Angles from Quaternion

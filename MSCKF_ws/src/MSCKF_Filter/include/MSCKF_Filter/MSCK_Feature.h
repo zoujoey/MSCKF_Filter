@@ -1,48 +1,38 @@
-#ifndef MSCKF_FEATURE_H
-#define MSCKF_FEATURE_H
+#ifndef MSCK_FEATURE_HPP
+#define MSCK_FEATURE_HPP
 
-#include "MSCKF_Filter/MSCK_Types.hpp"
+#include "MSCK_Feature.h"
+#include "math_utils.h"
 #include <ceres/ceres.h>
 
 namespace MSCKalman {
 
-// Functor representing measurement of a single feature from a single camera pose
-struct MeasurementModel : public Eigen::DenseFunctor<double> {
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+class MeasurementModelCostFunction : public ceres::CostFunction {
+public:
+    MeasurementModelCostFunction(const VectorOfVector2d& measurements,
+                                 const VectorOfMatrix3d& camera_rotations,
+                                 const VectorOfVector3d& camera_positions);
 
-    MeasurementModel(VectorOfVector2d measurements,
-                     const VectorOfMatrix3d &camera_rotations,
-                     const VectorOfVector3d &camera_positions);
+    virtual bool Evaluate(double const* const* parameters,
+                          double* residuals,
+                          double** jacobians) const override;
 
-    // Calculate residuals for each frame given the parameters x. Return 0.
-    int operator()(const Vector3d &x, VectorXd &fvec);
-
-    // Calculate Jacobian matrix. Return 0.
-    int df(const Vector3d &x, MatrixXd &fjac);
-
-    // Helper function to get h_i(alpha, beta, rho) for given camera frame
-    Vector3d hFromParams(const Vector3d &x, int i) const;
-
-    const size_t M;
-    VectorOfVector2d measurements_;
-    VectorOfMatrix3d local_rotations_;
-    VectorOfVector3d local_positions_;
+private:
+    const VectorOfVector2d& measurements_;
+    const VectorOfMatrix3d& camera_rotations_;
+    const VectorOfVector3d& camera_positions_;
 };
 
-// Convert 3d position in camera frame to idealized measurement
-Vector2d measurementFromPosition(const Vector3d &position);
+Vector3d estimateFeaturePosition(const VectorOfVector2d& measurements,
+                                 const VectorOfMatrix3d& camera_rotation_estimates,
+                                 const VectorOfVector3d& camera_position_estimates,
+                                 VectorXd& residuals);
 
-// Estimate feature position given M ideal pixel measurements and M camera pose estimates
-Vector3d estimateFeaturePosition(const VectorOfVector2d &measurements,
-                                 const VectorOfMatrix3d &camera_rotation_estimates,
-                                 const VectorOfVector3d &camera_position_estimates,
-                                 VectorXd &residuals);
-
-// Estimate 3D feature position in the frame of camera 1 using least squares,
-// given two camera measurements and the transform to camera frame 2
+ // namespace MSCKalman
 Vector3d triangulateFromTwoCameraPoses(const Vector2d &measurement1,
                                        const Vector2d &measurement2,
                                        const Matrix3d &rotation1to2,
                                        const Vector3d &translation1to2);
+}
 
-#endif // MSCKF_FEATURE_H
+#endif // MSCK_FEATURE_HPP
