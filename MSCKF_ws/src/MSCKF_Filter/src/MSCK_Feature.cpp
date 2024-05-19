@@ -1,4 +1,4 @@
-#include "MSCKF_Filter/MSCK_Feature.hpp"
+#include "MSCKF_Filter/MSCK_Feature.h"
 
 namespace MSCKalman {
 
@@ -92,7 +92,7 @@ Vector3d estimateFeaturePosition(const VectorOfVector2d& measurements,
     
     // Output the residuals
     residuals.resize(2 * M);
-    model(params, residuals);
+    //model(params, residuals);
     
     // Compute global position
     auto pos = inverseDepthParams(params);

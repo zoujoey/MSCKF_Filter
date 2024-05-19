@@ -1,5 +1,7 @@
+#ifndef TRACKING_NODELET_H
+#define TRACKING_NODELET_H
+
 #include <ros/ros.h>
-#include <nodelet/nodelet.h>
 #include <sensor_msgs/Image.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/features2d.hpp>
@@ -7,10 +9,9 @@
 #include <cv_bridge/cv_bridge.h>
 #include <vector>
 #include <map>
-#include <boost/shared_ptr.hpp>
 #include <Eigen/Dense>
-#include "types.hpp"
-#include "feature_tracker/ImageFeatures.h"
+#include "MSCKF_Filter/MSCK_Types.h"
+#include "MSCKF_Filter/ImageFeatures.h"
 
 /*
 General sensor definitions.
@@ -35,7 +36,7 @@ distortion_model: radial-tangential
 distortion_coefficients: [-0.28340811, 0.07395907, 0.00019359, 1.76187114e-05]
 */
 
-namespace feature_tracker {
+namespace MSCKalman {
 
 class FeatureTracker /*: public nodelet::Nodelet*/ {
 public:
@@ -46,7 +47,6 @@ public:
     //void onInit() override;
 
     int threshold = 10;
-
     static bool compare_response(cv::KeyPoint first, cv::KeyPoint second);
 
 private:
@@ -63,7 +63,7 @@ private:
     cv::Point2f undistort_cv(const cv::Point2f &uv_dist, std::string distortion_model);
     Eigen::Vector2f undistort_f_radtan(const Eigen::Vector2f &uv_dist);
     Eigen::Vector2f undistort_f_fisheye(const Eigen::Vector2f &uv_dist);
-
+    
     int generate_feature_id();
 
     cv::Matx33d cam_matrix;
@@ -73,6 +73,8 @@ private:
     int min_px_dist;
     int pyr_levels;
     cv::Size win_size;
+
+    MSCKF_Filter::ImageFeatures test2;
 
     //Previous and Current Images
     cv_bridge::CvImagePtr cam0_img_curr;
@@ -92,12 +94,11 @@ private:
 
     cv::Ptr<cv::FastFeatureDetector> fast;
     cv::Ptr<cv::BFMatcher> matcher;
-    std::map<int, FeatureTrack> feature_tracks;
 
-    GridConfig grid_config;
-    CameraParameters camera_parameters;
     bool initialized_camera = false;
     double MATCH_RATIO = 0.65;
 };
 
 } // namespace feature_tracker
+
+#endif

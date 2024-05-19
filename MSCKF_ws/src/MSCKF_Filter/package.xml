@@ -62,6 +62,10 @@
   <build_depend>tf</build_depend>
   <build_depend>Eigen</build_depend>
   <build_depend>cmath</build_depend>
+  <build_depend>tf_conversions</build_depend>
+  <build_depend>eigen_conversions</build_depend>
+  <build_depend>message_generation</build_depend>
+
   <build_depend>message_generation</build_depend>
   <build_export_depend>cv_bridge</build_export_depend>
   <build_export_depend>geometry_msgs</build_export_depend>
@@ -76,6 +80,9 @@
   <build_export_depend>tf</build_export_depend>
   <build_export_depend>Eigen</build_export_depend>
   <build_export_depend>cmath</build_export_depend>
+  <build_export_depend>tf_conversions</build_export_depend>
+  <build_export_depend>eigen_conversions</build_export_depend>
+
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>image_transport</exec_depend>
@@ -89,6 +96,8 @@
   <exec_depend>tf</exec_depend>
   <exec_depend>Eigen</exec_depend>
   <exec_depend>cmath</exec_depend>
+  <exec_depend>tf_conversions</exec_depend> 
+  <exec_depend>eigen_conversions</exec_depend> 
   <exec_depend>message_runtime</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->

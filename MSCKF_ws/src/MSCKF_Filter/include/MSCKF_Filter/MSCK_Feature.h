@@ -1,7 +1,6 @@
 #ifndef MSCK_FEATURE_HPP
 #define MSCK_FEATURE_HPP
 
-#include "MSCK_Feature.h"
 #include "math_utils.h"
 #include <ceres/ceres.h>
 

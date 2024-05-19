@@ -1,14 +1,13 @@
-//#include "tracking_nodelet.hpp"
-#include "tracking_nodelet.h"
+#include "MSCKF_Filter/tracking_nodelet.h"
 
-namespace feature_tracker {
+namespace MSCKalman {
 
     FeatureTracker::FeatureTracker(const ros::NodeHandle &nh, const ros::NodeHandle &pnh) : nh_(nh), pnh_(pnh) {
         fast = cv::FastFeatureDetector::create();
         matcher = cv::BFMatcher::create();
 
         auto image_transport = image_transport::ImageTransport{nh_};
-        features_pub = nh_.advertise<feature_tracker::ImageFeatures>("features", 10);
+        features_pub = nh_.advertise<MSCKF_Filter::ImageFeatures>("features", 10);
         image_pub = image_transport.advertise("output_image", 1);
         image_sub = image_transport.subscribe("/cam0/image_raw", 3, &FeatureTracker::image_callback, this);
         imagePub_ = nh_.advertise<sensor_msgs::Image>("feature_image", 1000);
@@ -449,14 +448,14 @@ namespace feature_tracker {
         if(!initialized_camera){
             std::cout << "Have not recivied camera info" << std::endl;
         }
-        feature_tracker::ImageFeatures msg;
+        MSCKF_Filter::ImageFeatures msg;
         msg.image_seq = cv_image->header.seq;
 
         std::cout << "Img Seq: " << cv_image->header.seq << std::endl;
 
         int i = 0; 
         for(const auto &k : keypoints){
-            feature_tracker::Feature f;
+            MSCKF_Filter::Feature f;
             f.position.x = k.pt.x;
             f.position.y = k.pt.y;
             f.id = k.class_id;

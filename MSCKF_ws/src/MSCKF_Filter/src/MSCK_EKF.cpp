@@ -1,11 +1,12 @@
-#include "MSCKF_Filter/MSCK_Filter.h"
+#include "MSCKF_Filter/MSCK_EKF.h"
 
 namespace MSCKalman {
 
-MSCKF_Filter::MSCKF_Filter(){
+MSCKF_EKF::MSCKF_EKF(){
 }
+
 //INITIALIZE VARIABLES
-void MSCKF_Filter::init() {
+void MSCKF_EKF::init() {
     // Initialize Prior Estimates
     //TODO Feature List of Stuff
     N = nCameraPoses(); //Number of camera poses
@@ -125,7 +126,7 @@ void MSCKF_Filter::init() {
 }
 
 //INTIALIZE GRAVITY BIAS 
-void MSCKF_Filter::gravity_bias_initialization() {
+void MSCKF_EKF::gravity_bias_initialization() {
     // Implement your gravity bias initialization function here
     ROS_INFO("Starting Initialization");
     Eigen::Vector3d sum_gyr = Eigen::Vector3d::Zero();
@@ -164,7 +165,7 @@ void MSCKF_Filter::gravity_bias_initialization() {
 }
 
 //IMU PROPAGATION
-void MSCKF_Filter::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m) {
+void MSCKF_EKF::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m) {
     // Implement your IMU propagation function here
     ROS_INFO("Starting Propagate IMU");
     Eigen::Vector3d acc = acc_m - acc_bias;
@@ -225,7 +226,7 @@ void MSCKF_Filter::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const 
     //std::cout << "Position: x = " << imu_pos(0) << ", y = " << imu_pos(1) << ", z = " << imu_pos(2) << std::endl;
 }
 
-void MSCKF_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc) {
+void MSCKF_EKF::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc) {
     // Implement your IMU state estimation function here
     //IMU Quaternion Integration (0th Order)
     std::cout << "Linear Acc: " << acc << std::endl;
@@ -289,7 +290,7 @@ void MSCKF_Filter::imu_state_estimate(const double& dt, const Eigen::Vector3d& g
 }
 
 //ADD CAMERA FRAME
-void MSCKF_Filter::add_camera_frame(ImageSeq image_seq){
+void MSCKF_EKF::add_camera_frame(ImageSeq image_seq){
     const auto N = nCameraPoses();
     state_augmentation();
     covariance_augmentation();
@@ -303,7 +304,7 @@ void MSCKF_Filter::add_camera_frame(ImageSeq image_seq){
     }
 }
 
-int MSCKF_Filter::nFromInternalSeq(InternalSeq seq) const{
+int MSCKF_EKF::nFromInternalSeq(InternalSeq seq) const{
     const auto n = seq - next_camera_seq + nCameraPoses();
     if (n < 0 || seq >= next_camera_seq) {
         throw std::out_of_range("That camera pose is not in the filter state");
@@ -311,16 +312,16 @@ int MSCKF_Filter::nFromInternalSeq(InternalSeq seq) const{
     return n;
 }
 
-int MSCKF_Filter::nFromImageSeq(ImageSeq seq) const{
+int MSCKF_EKF::nFromImageSeq(ImageSeq seq) const{
     return nFromInternalSeq(image_seqs.at(seq));
 }
 
-InternalSeq MSCKF_Filter::addImageSeq(ImageSeq image_seq){
+InternalSeq MSCKF_EKF::addImageSeq(ImageSeq image_seq){
     image_seqs.insert({image_seq, next_camera_seq});
     return next_camera_seq++;
 }
 
-void MSCKF_Filter::state_augmentation() {
+void MSCKF_EKF::state_augmentation() {
     // Implement your state augmentation function here
     cam_q = rotation_q*cam_imu_q;
     cam_pos = imu_pos + cam_q.toRotationMatrix().transpose()*cam_imu_pose;
@@ -332,7 +333,7 @@ void MSCKF_Filter::state_augmentation() {
     cam_state.segment(16+7*N+4, 16+7*N+7) = cam_pos;
 }
 
-void MSCKF_Filter::covariance_augmentation() {
+void MSCKF_EKF::covariance_augmentation() {
     // Implement your covariance augmentation function here
     Eigen::MatrixXd J = Eigen::MatrixXd::Zero(6,6*N + 15);
     //top row
@@ -354,7 +355,7 @@ void MSCKF_Filter::covariance_augmentation() {
 }
 
 //ADD FEATURES
-void MSCKF_Filter::add_features(ImageSeq image_seq, FeatureList features/*const MSCKF_Filter::ImageFeaturesConstPtr &msg*/) {
+void MSCKF_EKF::add_features(ImageSeq image_seq, FeatureList features/*const MSCKF_Filter::ImageFeaturesConstPtr &msg*/) {
     // Did we already have addCameraFrame() called with this image_seq?
     if (image_seqs.count(image_seq)) {
         for (auto &f : features) {
@@ -368,7 +369,7 @@ void MSCKF_Filter::add_features(ImageSeq image_seq, FeatureList features/*const 
     }
 }
 
-void MSCKF_Filter::processFeatures(){
+void MSCKF_EKF::processFeatures(){
     const auto features_to_use = filterFeatures();
     if (features_to_use.empty()) {
         return;
@@ -387,7 +388,7 @@ void MSCKF_Filter::processFeatures(){
     MSCKF_Update(r_o, H_o, R_o);
 }
 
-std::vector<FeatureInstanceList> MSCKF_Filter::filterFeatures() {
+std::vector<FeatureInstanceList> MSCKF_EKF::filterFeatures() {
     auto features_to_use = std::vector<FeatureInstanceList>{};
 
     for (auto it = features_.cbegin(); it != features_.cend();) {
@@ -406,15 +407,15 @@ std::vector<FeatureInstanceList> MSCKF_Filter::filterFeatures() {
     return features_to_use;
 }
 
-bool MSCKF_Filter::isFeatureExpired(const FeatureInstanceList &instances) const {
+bool MSCKF_EKF::isFeatureExpired(const FeatureInstanceList &instances) const {
     return (instances.back().seq < last_features_seq);
 }
 
-bool MSCKF_Filter::isFeatureUsable(const FeatureInstanceList &instances) const {
+bool MSCKF_EKF::isFeatureUsable(const FeatureInstanceList &instances) const {
     return (instances.size() > min_track_length);
 }
 
-void MSCKF_Filter::estimate_feature_positions(const std::vector<FeatureInstanceList> &features,
+void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList> &features,
                                    VectorXd &r_o,
                                    MatrixXd &H_o,
                                    MatrixXd &R_o) {
@@ -471,7 +472,7 @@ void MSCKF_Filter::estimate_feature_positions(const std::vector<FeatureInstanceL
 }
 
 //MSCKF_UPDATE
-void MSCKF_Filter::MSCKF_Update(const VectorXd &r, const MatrixXd &H, const MatrixXd &R) {
+void MSCKF_EKF::MSCKF_Update(const VectorXd &r, const MatrixXd &H, const MatrixXd &R) {
     const auto l = r.size();
     const auto N = nCameraPoses();
     const auto d = 12 + 6 * N;
@@ -500,7 +501,7 @@ void MSCKF_Filter::MSCKF_Update(const VectorXd &r, const MatrixXd &H, const Matr
             + K * R * K.transpose();
 }
 
-void MSCKF_Filter::projectLeftNullspace(const MatrixXd &H_f_j, VectorXd &r, MatrixXd &H_X_j) {
+void MSCKF_EKF::projectLeftNullspace(const MatrixXd &H_f_j, VectorXd &r, MatrixXd &H_X_j) {
     // Implement your MSCKF update function here
     // As in Mourikis, A is matrix whose columns form basic of left nullspace of H_f.
     // Note left nullspace == kernel of transpose
@@ -510,7 +511,7 @@ void MSCKF_Filter::projectLeftNullspace(const MatrixXd &H_f_j, VectorXd &r, Matr
 }
 
 
-void MSCKF_Filter::singleFeatureH(const Vector3d &estimated_global_pos,
+void MSCKF_EKF::singleFeatureH(const Vector3d &estimated_global_pos,
                          const std::vector<int> &cameraIndices,
                          MatrixXd &H_X_j,
                          MatrixXd &H_f_j) {
@@ -536,7 +537,7 @@ void MSCKF_Filter::singleFeatureH(const Vector3d &estimated_global_pos,
         H_f_j.block<2, 3>(2 * i, 0) << J_i * C;
     }
 }
-void MSCKF_Filter::qrDecomposition(VectorXd &r, MatrixXd &H, MatrixXd &R) {
+void MSCKF_EKF::qrDecomposition(VectorXd &r, MatrixXd &H, MatrixXd &R) {
     auto qr = H.householderQr();
     const auto m = H.rows();
     const auto n = H.cols();
@@ -550,7 +551,7 @@ void MSCKF_Filter::qrDecomposition(VectorXd &r, MatrixXd &H, MatrixXd &R) {
     r = Q1.transpose() * r;
     R = Q1.transpose() * R * Q1;
 }
-void MSCKF_Filter::updateState(const VectorXd &state_error) {
+void MSCKF_EKF::updateState(const VectorXd &state_error) {
     // The state holds quaternions but state_error should hold angle errors.
     const auto N = nCameraPoses();
     assert(state_error.size() == state_.size() - 1 - N);

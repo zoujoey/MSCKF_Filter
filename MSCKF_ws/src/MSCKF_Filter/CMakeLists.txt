@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.0.2)
 project(MSCKF_Filter)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
+
+find_package(Eigen3)
+find_package(OpenCV)
+find_package(Ceres REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   geometry_msgs
@@ -22,45 +22,64 @@ find_package(catkin REQUIRED COMPONENTS
   tf_conversions
   eigen_conversions
   message_generation
-  )
-
-find_package(OpenCV REQUIRED)
-
-catkin_package(
-  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime 
-  )
-
-###########
-## Build ##
-###########
-
-include_directories(
-  include/MSCKF_Filter
-  ${catkin_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIR}
-  ${PCL_INCLUDE_DIRS}
-  )
-
-add_executable(MSCK_Filter
-  src/main_MSCKfilter.cpp
-  src/MSCK_Filter.cpp
-  src/tracking_nodelet.cpp
-  )
+)
 
 add_message_files(
   FILES
   Feature.msg
   ImageFeatures.msg
- )
-  
- generate_messages(
-   DEPENDENCIES
-   std_msgs
-   geometry_msgs
- )
- 
-target_link_libraries(MSCK_Filter
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
+)
+
+catkin_package(
+  #INCLUDE_DIRS include
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+  #LIBRARIES ${PROJECT_NAME}
+)
+
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${CERES_INCLUDE_DIRS}
+)
+
+add_library(msckf_filter
+  src/MSCK_EKF.cpp 
+  src/MSCK_Feature.cpp
+  src/MSCK_Node.cpp
+)
+target_link_libraries(msckf_filter
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${CERES_LIBRARIES}
+)
+
+add_library(feature_tracking
+  src/tracking_nodelet.cpp
+)
+target_link_libraries(feature_tracking
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  ${PCL_LIBRARIES}
-  )
+)
+
+add_executable(feature_tracking_node
+  src/tracking_node.cpp
+)
+target_link_libraries(feature_tracking_node
+  feature_tracking
+)
+
+add_executable(msckf_main
+  src/main_MSCKfilter.cpp
+)
+target_link_libraries(msckf_main
+  msckf_filter
+)

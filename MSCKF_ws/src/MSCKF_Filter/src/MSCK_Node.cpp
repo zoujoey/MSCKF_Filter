@@ -1,76 +1,79 @@
-#include "MSCKF_Node.h"
-#include "MSCKF_Filter.h"
+#include "MSCKF_Filter/MSCK_Node.h"
+
 namespace MSCKalman {
 
 MSCKF_Node::MSCKF_Node(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
     : nh_(nh), pnh_(pnh) {
-    imu_sub = nh_.subscribe<sensor_msgs::Imu>("imu0", 1, &MSCKF_Node::IMU_Callback, this);
+    imu_sub = nh_.subscribe<sensor_msgs::Imu>("imu0", 1, &MSCKF_Node::imu_callback, this);
     ROS_INFO("Subscribe to IMU");
-    image_sub = nh_.subscribe<nav_msgs::Image>("cam0/image_raw", 1, &MSCKF_Node::CAM_Callback, this);
+
+    auto image_transport = image_transport::ImageTransport{nh_};
+    image_sub = image_transport.subscribe("cam0/image_raw", 1, &MSCKF_Node::image_callback, this);
     ROS_INFO("Subscribe to CAM");
 
-    msckf_filter.init(); // Call initialization function from MSCKF_Filter
+    filter.init(); // Call initialization function from MSCKF_Filter
 }
 
-void MSCKF_Node::IMU_Callback(const sensor_msgs::ImuConstPtr& IMU_Msg) {
-    acc_m << IMU_Msg->linear_acceleration.x, IMU_Msg->linear_acceleration.y, IMU_Msg->linear_acceleration.z;
-    gyr_m << IMU_Msg->angular_velocity.x, IMU_Msg->angular_velocity.y, IMU_Msg->angular_velocity.z;
+void MSCKF_Node::imu_callback(const sensor_msgs::ImuConstPtr& msg) {
+    filter.acc_m << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
+    filter.gyr_m << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
 
-    double imu_time = IMU_Msg->header.stamp.toSec();
+    double imu_time = msg->header.stamp.toSec();
 
-    if(!is_gravity_init){
-       imu_init_buffer.push_back(*IMU_Msg);
-       if(imu_init_buffer.size() > 200){
+    if(!filter.is_gravity_init){
+       filter.imu_init_buffer.push_back(*msg);
+       if(filter.imu_init_buffer.size() > 200){
            ROS_INFO("Initalization Starts");
-           gravity_bias_initialization();
-           is_gravity_init = true;
+           filter.gravity_bias_initialization();
+           filter.is_gravity_init = true;
        }
     }
     else{
        ROS_INFO("Start propagation");
-       propagate_imu(imu_dt, acc_m, gyr_m);
+       filter.propagate_imu(filter.imu_dt, filter.acc_m, filter.gyr_m);
     }
 
-    if(imu_first_data){
-        imu_first_data = false;
-        imu_last_time = imu_time;
+    if(filter.imu_first_data){
+        filter.imu_first_data = false;
+        filter.imu_last_time = imu_time;
         return;
     }
-    publishOdom(); 
-    imu_dt = imu_time - imu_last_time;
-    imu_last_time = imu_time;
+    publish_odom(); 
+    filter.imu_dt = imu_time - filter.imu_last_time;
+    filter.imu_last_time = imu_time;
 }
 
-void MSCKF_Node::IMAGE_Callback(const nav_msgs::Image::ConstPtr& CAM_Msg) {
-    // Implement your camera callback function here
-
-    if(is_gravity_init){
+void MSCKF_Node::image_callback(const sensor_msgs::ImageConstPtr &msg) {
+    if(filter.is_gravity_init){
         ROS_INFO("Image Received");
-        addCameraFrame(msg->header.msg);
+        filter.add_camera_frame(msg->header.seq);
     }
-    publishOdom();
+    publish_odom();
 }
 
-void MSCKF_Node::FEATURE_Callback(const MSCKalman::ImageFeaturesConstPtr &msg) {
+
+void MSCKF_Node::feature_callback(const MSCKF_Filter::ImageFeaturesConstPtr &msg) {
     // Implement your feature callback function here
     auto features = FeatureList{};
     for (const auto &f : msg->features) {
         features.push_back(ImageFeature{f.id, {f.position.x, f.position.y}});
     }
-    addFeatures(msg->image_seq, features);
+    filter.add_features(msg->image_seq, features);
 }
 
-void MSCKF_Filter::publishOdom() {
-    // Implement your odom publishing function here
-    imu_odom.header.frame_id = "world";
-    imu_odom.pose.pose.position.x = imu_pos(0);
-    imu_odom.pose.pose.position.y = imu_pos(1);
-    imu_odom.pose.pose.position.z = imu_pos(2);
 
-    imu_odom.pose.pose.orientation.x = rotation_q.x();
-    imu_odom.pose.pose.orientation.y = rotation_q.y();
-    imu_odom.pose.pose.orientation.z = rotation_q.z();
-    imu_odom.pose.pose.orientation.w = rotation_q.w();
+void MSCKF_Node::publish_odom() {
+    // Implement your odom publishing function here
+    nav_msgs::Odometry imu_odom;
+    imu_odom.header.frame_id = "world";
+    imu_odom.pose.pose.position.x = filter.imu_pos(0);
+    imu_odom.pose.pose.position.y = filter.imu_pos(1);
+    imu_odom.pose.pose.position.z = filter.imu_pos(2);
+
+    imu_odom.pose.pose.orientation.x = filter.rotation_q.x();
+    imu_odom.pose.pose.orientation.y = filter.rotation_q.y();
+    imu_odom.pose.pose.orientation.z = filter.rotation_q.z();
+    imu_odom.pose.pose.orientation.w = filter.rotation_q.w();
 
     odom_pub.publish(imu_odom);
 }

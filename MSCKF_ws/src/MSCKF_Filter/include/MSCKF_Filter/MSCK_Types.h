@@ -13,10 +13,10 @@ using Eigen::MatrixXd;
 using Eigen::Quaterniond;
 using Eigen::AngleAxisd;
 
-using PoseVector = Eigen::Vector<double, 7>;  // Quaternion followed by position
+using PoseVector = Eigen::Matrix<double, 7, 1>;  // Quaternion followed by position
 
-using ImuStateVector = Eigen::Vector<double, 16>;
-using ImuErrorVector = Eigen::Vector<double, 12>;
+using ImuStateVector = Eigen::Matrix<double, 16, 1>;
+using ImuErrorVector = Eigen::Matrix<double, 12, 1>;
 using ImuCovMatrix = Eigen::Matrix<double, 15, 15>;
 using ImageSeq = uint32_t;
 using InternalSeq = uint32_t;

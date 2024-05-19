@@ -1,22 +1,19 @@
-#ifndef MSCKF_FILTER_H
-#define MSCKF_FILTER_H
+#ifndef MSCKF_EKF_H
+#define MSCKF_EKF_H
 
-#include <ros/ros.h>
-#include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
-#include <sensor_msgs/Image.h>
 #include <eigen3/Eigen/Dense>
 #include <tf_conversions/tf_eigen.h>
 #include <eigen_conversions/eigen_msg.h>
 #include "MSCKF_Filter/MSCK_Feature.h"
 
-namespace MSCKalman {
+namespace MSCKalman{
 
-class MSCKF_Filter {
+class MSCKF_EKF{
 public:
-    MSCKF_Filter();
-    ~MSCKF_Filter(){}
-//List of Functions
+    MSCKF_EKF();
+    ~MSCKF_EKF(){}
+
     //INTIALIZATION
     void init();
     void gravity_bias_initialization();
@@ -52,7 +49,6 @@ public:
     void MSCKF_Update(const VectorXd &r, const MatrixXd &H, const MatrixXd &R);
     void qrDecomposition(VectorXd &r, MatrixXd &H, MatrixXd &R);
     void updateState(const VectorXd &state_error);
-
 
     //List of Variables
     //STATE VECTOR
@@ -187,6 +183,6 @@ public:
     }
 };
 
-} // namespace MSCKalman
+}//namespace
 
-#endif // MSCKF_FILTER_H
+#endif

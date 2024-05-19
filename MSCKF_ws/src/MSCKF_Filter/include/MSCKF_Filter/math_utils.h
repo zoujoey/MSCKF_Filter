@@ -2,8 +2,9 @@
 #define MSCKF_UTIL_HPP
 
 #include "MSCK_Types.h"
+#include <numeric>
 
-namespace msckf {
+namespace MSCKalman {
 //Eulerian Angles from Quaternion
 inline Vector3d xyzFromQuaternion(const Quaterniond &quaternion) {
     return quaternion.matrix().eulerAngles(2, 1, 0).reverse();
