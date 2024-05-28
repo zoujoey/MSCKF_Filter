@@ -38,6 +38,11 @@ distortion_coefficients: [-0.28340811, 0.07395907, 0.00019359, 1.76187114e-05]
 
 namespace MSCKalman {
 
+struct FeatureTrack {
+    uint32_t latest_image_seq;
+    std::vector<cv::KeyPoint> points;
+};
+
 class FeatureTracker /*: public nodelet::Nodelet*/ {
 public:
     FeatureTracker(const ros::NodeHandle& nh, const ros::NodeHandle& pnh);
@@ -46,13 +51,13 @@ public:
     ~FeatureTracker(){}
     //void onInit() override;
 
-    int threshold = 10;
-    static bool compare_response(cv::KeyPoint first, cv::KeyPoint second);
-
 private:
     void image_callback(const sensor_msgs::ImageConstPtr &msg);        
     void publish_features(const cv_bridge::CvImagePtr &cv_image, const std::vector<cv::KeyPoint> &keypoints);
     void draw_features(cv_bridge::CvImagePtr imagePtr, const std::vector<cv::KeyPoint> &keypoints);
+    void store_feature_tracks(const std::vector<cv::KeyPoint> &keypoints, uint32_t image_seq);
+    void draw_feature_tracks(cv::Mat &output_image);
+    static bool compare_response(cv::KeyPoint first, cv::KeyPoint second);
     
     //Feature detection and tracking
     void perform_FAST(const cv::Mat &img, std::vector<cv::KeyPoint> &pts, int num_features, int grid_x, int grid_y, int threshold);
@@ -72,13 +77,15 @@ private:
     int num_features;
     int min_px_dist;
     int pyr_levels;
+    int threshold = 10;
     cv::Size win_size;
-
-    MSCKF_Filter::ImageFeatures test2;
 
     //Previous and Current Images
     cv_bridge::CvImagePtr cam0_img_curr;
     cv_bridge::CvImagePtr cam0_img_prev;
+
+    // map of currently visible features and their track
+    std::map<int, FeatureTrack> feature_tracks;
 
     //Previous and Current Pyramids
     std::vector<cv::Mat> cam0_pyr_curr;
@@ -89,14 +96,13 @@ private:
     image_transport::Subscriber image_sub;
     image_transport::Publisher image_pub;
     ros::Publisher imagePub_;
-    ros::Subscriber camera_info_sub;
     ros::Publisher features_pub;
+    ros::Subscriber camera_info_sub;
 
     cv::Ptr<cv::FastFeatureDetector> fast;
     cv::Ptr<cv::BFMatcher> matcher;
 
     bool initialized_camera = false;
-    double MATCH_RATIO = 0.65;
 };
 
 } // namespace feature_tracker

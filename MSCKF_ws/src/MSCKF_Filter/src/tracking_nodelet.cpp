@@ -76,14 +76,14 @@ namespace MSCKalman {
 
         //extract image pyramid
         cv::buildOpticalFlowPyramid(curr_img, cam0_pyr_curr, win_size, pyr_levels); 
-        std::cout << "Pyr Size: " << cam0_pyr_curr.size() << std::endl;       
+        //std::cout << "Pyr Size: " << cam0_pyr_curr.size() << std::endl;       
 
         std::vector<cv::KeyPoint> prev_good_points;
         if(!initialized_camera){
             std::vector<cv::KeyPoint> good_points;
-            std::cout << "Test Perf Detect" << std::endl;
+            //std::cout << "Test Perf Detect" << std::endl;
             perform_detection(cam0_pyr_curr, mask, good_points, grid_x, grid_y, min_px_dist, num_features, threshold);
-            std::cout << "Initial Detect Done" << std::endl;
+            //std::cout << "Initial Detect Done" << std::endl;
             prev_img = curr_img;
             cam0_pyr_prev = cam0_pyr_curr;
             prev_good_points = good_points;
@@ -100,7 +100,7 @@ namespace MSCKalman {
         }
 
         //Display detected features on RVIZ
-        std::cout << "Num Features Detected: " << good_points_old.size() << std::endl;
+        //std::cout << "Num Features Detected: " << good_points_old.size() << std::endl;
         draw_features(cam0_rgb, good_points_old);
         imagePub_.publish(cam0_rgb->toImageMsg());
 
@@ -108,13 +108,13 @@ namespace MSCKalman {
         std::vector<unsigned char> mask_out;
         std::vector<cv::KeyPoint> curr_good_points = good_points_old;
         perform_matching(cam0_pyr_prev, cam0_pyr_curr, good_points_old, curr_good_points, mask_out);
-        std::cout << "Num Matches: " << good_points_old.size() << std::endl;
+        //std::cout << "Num Matches: " << good_points_old.size() << std::endl;
 
         if(mask_out.empty()){
             prev_img = curr_img;
             cam0_pyr_prev = cam0_pyr_curr;
             initialized_camera = false;
-            std::cout << "Not enough points for RANSAC" << std::endl;
+            //std::cout << "Not enough points for RANSAC" << std::endl;
             return;
         }
 
@@ -137,8 +137,18 @@ namespace MSCKalman {
             }
         }
         
+        cv::Mat output = image;
+
         //Publish tracked points
         publish_features(cam0_img_curr, good_points);
+
+        store_feature_tracks(good_points, cam0_img_curr->header.seq);
+
+        cv::drawKeypoints(image, good_points, image, -1, cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+
+        draw_feature_tracks(output);
+
+        image_pub.publish(cam0_img_curr->toImageMsg());
 
         prev_img = curr_img;
         cam0_pyr_prev = cam0_pyr_curr;
@@ -179,7 +189,6 @@ namespace MSCKalman {
 
                 //Extract FAST features
                 std::vector<cv::KeyPoint> pts_new;
-                //fast->detect(img(img_roi), pts_new, threshold, true);
                 cv::FAST(img(img_roi), pts_new, threshold, true);
 
                 //Sort pts_new by keypoint size
@@ -451,7 +460,9 @@ namespace MSCKalman {
         MSCKF_Filter::ImageFeatures msg;
         msg.image_seq = cv_image->header.seq;
 
-        std::cout << "Img Seq: " << cv_image->header.seq << std::endl;
+        //std::cout << "Published Feature Seq: " << cv_image->header.seq << std::endl;
+
+        //std::cout << "Img Seq: " << cv_image->header.seq << std::endl;
 
         int i = 0; 
         for(const auto &k : keypoints){
@@ -460,7 +471,7 @@ namespace MSCKalman {
             f.position.y = k.pt.y;
             f.id = k.class_id;
             f.response = k.response;
-            f.octave = k.octave;
+            //f.octave = k.octave;
             msg.features.push_back(f);
             ++i;
         }
@@ -473,4 +484,56 @@ namespace MSCKalman {
             cv::circle(imagePtr->image, point, 2.0, cv::Scalar(0, 255, 0), 2.0);
         }
     }
+
+    void FeatureTracker::store_feature_tracks(const std::vector<cv::KeyPoint> &keypoints, uint32_t image_seq){
+        for(const auto &k : keypoints){
+            const auto &feature_id = k.class_id;
+
+            feature_tracks[feature_id].latest_image_seq = image_seq;
+            feature_tracks[feature_id].points.push_back(k);
+        }
+        for (auto it = feature_tracks.cbegin(); it != feature_tracks.cend();) {
+            const auto &track = it->second;
+            if (track.latest_image_seq != image_seq) {
+                // This feature does not exist in the latest frame. Erase this track from the map
+                it = feature_tracks.erase(it);
+            } 
+            else {
+                ++it;
+            }
+        }
+        //std::cout << "Num Feature Tracks: " << feature_tracks.size() << std::endl;
+    }
+
+    void FeatureTracker::draw_feature_tracks(cv::Mat &output_image){
+        auto drawn = 0;
+        auto longest_track = 0ul;
+
+        std::cout << "Feature Tracks Size: " << feature_tracks.size() << std::endl;
+        for (const auto &ft : feature_tracks) {
+            const auto &points = ft.second.points;
+            // change color based on track length
+            std::cout << "Points Size: " << points.size()  << std::endl;
+
+            auto color = cv::Scalar(255, 255, 0, 1);  // yellow
+            auto i = points.size();
+            if (i > 5) {
+                color = cv::Scalar(50, 255, 50, 1);  // green
+            } else {
+                break;
+            }
+
+            for (i = 1; i < points.size(); ++i) {
+                auto &curr = points[i];
+                auto &prev = points[i - 1];
+                arrowedLine(output_image, prev.pt, curr.pt, color);
+            }
+            if (points.size() > longest_track) {
+                longest_track = points.size();
+            }
+            ++drawn;
+        }
+        std::cout << "Drew " << drawn << " tracks, the longest was: " << longest_track << std::endl;
+    }
+
 } //namespace
