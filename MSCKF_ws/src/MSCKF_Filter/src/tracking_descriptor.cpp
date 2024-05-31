@@ -45,10 +45,6 @@ namespace MSCKalman {
         MSCKF_Filter::ImageFeatures msg;
         msg.image_seq = cv_image->header.seq;
 
-        //std::cout << "Published Feature Seq: " << cv_image->header.seq << std::endl;
-
-        //std::cout << "Img Seq: " << cv_image->header.seq << std::endl;
-
         int i = 0; 
         for(int i = 0; i < keypoints.size(); i++){
             const auto &k = keypoints[i];
@@ -72,7 +68,7 @@ namespace MSCKalman {
             feature_tracks[feature_id].points.push_back(k);
         }
 
-        std::cout << "Store Feature Tracks Before Prune: " << feature_tracks.size() << std::endl;
+        //std::cout << "Store Feature Tracks Before Prune: " << feature_tracks.size() << std::endl;
 
         for (auto it = feature_tracks.cbegin(); it != feature_tracks.cend();) {
             const auto &track = it->second;
@@ -84,7 +80,38 @@ namespace MSCKalman {
                 ++it;
             }
         }
-        std::cout << "Num Feature Tracks After Prune: " << feature_tracks.size() << std::endl;
+        //std::cout << "Num Feature Tracks After Prune: " << feature_tracks.size() << std::endl;
+    }
+
+    void TrackDescriptor::draw_feature_tracks(cv::Mat &output_image){
+        auto drawn = 0;
+        auto longest_track = 0ul;
+
+        //std::cout << "Draw Feature Tracks Size: " << feature_tracks.size() << std::endl;
+        for (const auto &ft : feature_tracks) {
+            const auto &points = ft.second.points;
+            // change color based on track length
+            //std::cout << "Points Size: " << points.size()  << std::endl;
+
+            auto color = cv::Scalar(255, 255, 0, 1);  // yellow
+            auto i = points.size();
+            if (i > 5) {
+                color = cv::Scalar(50, 255, 50, 1);  // green
+            } else {
+                break;
+            }
+
+            for (i = 1; i < points.size(); ++i) {
+                auto &curr = points[i];
+                auto &prev = points[i - 1];
+                arrowedLine(output_image, prev.pt, curr.pt, color);
+            }
+            if (points.size() > longest_track) {
+                longest_track = points.size();
+            }
+            ++drawn;
+        }
+        //std::cout << "Drew " << drawn << " tracks, the longest was: " << longest_track << std::endl;
     }
 
     void TrackDescriptor::image_callback(const sensor_msgs::ImageConstPtr& msg){
@@ -182,19 +209,20 @@ namespace MSCKalman {
             }
         }
 
-        //std::cout << "Num Track: " << num_track_last << std::endl;
-
         publish_features(cam0_img_curr, good_points, good_ids);
 
         store_feature_tracks(good_points, good_ids, cam0_img_curr->header.seq);
 
-        //std::cout << "Feature Tracks Size: " << feature_tracks.size() << std::endl;
-
         cv::Mat output = image;
 
-        //cv::drawKeypoints(image, good_points, image, -1, cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
-        draw_features(cam0_rgb, good_points);
-        image_pub.publish(cam0_rgb->toImageMsg());
+        cv::drawKeypoints(image, good_points, image, -1, cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+        
+        // draw_features(cam0_rgb, good_points);
+        // image_pub.publish(cam0_rgb->toImageMsg());
+
+        draw_feature_tracks(output);
+
+        image_pub.publish(cam0_img_curr->toImageMsg());
 
         //std::cout << "Good Points Size: " << good_points.size() << ", Image Seq: " << cam0_img_curr->header.seq << std::endl;
 

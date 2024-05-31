@@ -68,8 +68,12 @@ Vector3d estimateFeaturePosition(const VectorOfVector2d& measurements,
     const auto& R2 = camera_rotation_estimates.back();
     const auto& p1 = camera_position_estimates.front();
     const auto& p2 = camera_position_estimates.back();
+
     const auto pos_guess = triangulateFromTwoCameraPoses(m1, m2, R2 * R1.inverse(), R1 * (p2 - p1));
-    auto params = VectorXd{inverseDepthParams(pos_guess)};
+    auto inverse_depth_pos = VectorXd{inverseDepthParams(pos_guess)};
+    double pos[] = {inverse_depth_pos[0], inverse_depth_pos[1], inverse_depth_pos[2]};
+    std::vector<double*> params;
+    params.push_back(pos);
     
     // Create a Ceres problem
     ceres::Problem problem;
@@ -77,9 +81,9 @@ Vector3d estimateFeaturePosition(const VectorOfVector2d& measurements,
     for (int i = 0; i < M; ++i) {
         auto* cost_function = new MeasurementModelCostFunction(measurements, camera_rotation_estimates, camera_position_estimates);
 
-        problem.AddResidualBlock(cost_function,
-                                 nullptr /* loss function */,
-                                 &params[0], &params[1], &params[2]);
+        problem.AddResidualBlock(cost_function, nullptr, params);
+
+        std::cout << "Test6" << std::endl;
     }
 
     // Configure solver options
@@ -95,8 +99,8 @@ Vector3d estimateFeaturePosition(const VectorOfVector2d& measurements,
     //model(params, residuals);
     
     // Compute global position
-    auto pos = inverseDepthParams(params);
-    auto global_pos = Vector3d{R1.transpose() * pos + p1};
+    auto position = inverseDepthParams(inverse_depth_pos);
+    auto global_pos = Vector3d{R1.transpose() * position + p1};
     
     return global_pos;
 }

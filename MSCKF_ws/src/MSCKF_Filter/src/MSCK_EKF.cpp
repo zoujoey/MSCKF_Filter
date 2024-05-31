@@ -381,10 +381,9 @@ void MSCKF_EKF::processFeatures(){
     ROS_INFO("Process Features");
     const auto features_to_use = filterFeatures();
     if (features_to_use.empty()) {
-        std::cout << "Empty" << std::endl;
+        //std::cout << "Empty" << std::endl;
         return;
     }
-    std::cout << "Not Empty" << std::endl;
     // Get stacked, uncorrelated residuals and Jacobian
     auto r_o = VectorXd{};  // residuals
     auto H_o = MatrixXd{};  // measurement Jacobian
@@ -401,7 +400,7 @@ void MSCKF_EKF::processFeatures(){
 std::vector<FeatureInstanceList> MSCKF_EKF::filterFeatures() {
     ROS_INFO("Filter Features");
     auto features_to_use = std::vector<FeatureInstanceList>{};
-    std::cout << "features_ Size: " << features_.size() << std::endl;
+    //std::cout << "features_ Size: " << features_.size() << std::endl;
     for (auto it = features_.cbegin(); it != features_.cend();) {
         const auto &instances = it->second;
         if (isFeatureExpired(instances)) {
@@ -433,12 +432,13 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
                                    MatrixXd &R_o) {
     // Implement your feature collapse function here
     ROS_INFO("Estimate Feature Positions");
+    double image_variance = 0.1;
     const auto total_rows = sizeOfNestedContainers(features);
     const auto N = nCameraPoses();
     const auto L = features.size();
     const auto n_residuals = 2 * total_rows - 3 * L;
     r_o.resize(n_residuals);  // residuals
-    H_o.resize(n_residuals, 12 + 6 * N);  // measurement Jacobian
+    H_o.resize(n_residuals, 15 + 6 * N);  // measurement Jacobian, changed from 12 to 15?
 
     auto total_i = 0;
     for (const auto &f : features) {
@@ -464,7 +464,7 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
         auto estimated_local = Vector3d{camera_rotations.front() * (estimated_pos - camera_positions.front())};
 
         // Calculate Jacobians for this feature estimate
-        auto H_X_j = MatrixXd{2 * M, 12 + 6 * N};
+        auto H_X_j = MatrixXd{2 * M, 15 + 6 * N}; //changed from 12 to 15?
         auto H_f_j = MatrixXd{2 * M, 3};
         singleFeatureH(estimated_pos, camera_indices, H_X_j, H_f_j);
 
@@ -478,10 +478,12 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
 
         // Push onto stacked matrices (todo: simplify)
         r_o.segment(total_i, new_dim) << residuals;
-        H_o.block(total_i, 0, new_dim, 12 + 6 * N) << H_X_j;
+        H_o.block(total_i, 0, new_dim, 15 + 6 * N) << H_X_j; //changed from 12 to 15?
 
         total_i += new_dim;
     }
+    R_o.resize(n_residuals, n_residuals);
+    R_o = image_variance * MatrixXd::Identity(n_residuals, n_residuals);
 }
 
 //MSCKF_UPDATE
@@ -489,16 +491,23 @@ void MSCKF_EKF::MSCKF_Update(const VectorXd &r, const MatrixXd &H, const MatrixX
     ROS_INFO("MSCKF Update");
     const auto l = r.size();
     const auto N = nCameraPoses();
-    const auto d = 12 + 6 * N;
+    const auto d = 15 + 6 * N; //changed from 12 to 15?
     assert(use_qr_decomposition || l == H.rows());
     assert(d == H.cols());
     assert(l == R.rows());
     assert(l == R.cols());
 
     // Calculate Kalman gain
-    const auto K = MatrixXd{covariance_ * H.transpose() * (H * covariance_ * H.transpose() + R).inverse()};
-    const auto state_change = VectorXd{K * r};
+    std::cout << "Test1" << std::endl;
+    std::cout << "P Rows: " << P.rows() << std::endl;
+    std::cout << "P Cols: " << P.cols() << std::endl;
+    std::cout << "H Rows: " << H.rows() << std::endl;
+    std::cout << "H Cols: " << H.cols() << std::endl;
+    std::cout << "R Size: " << R.size() << std::endl;
 
+    const auto K = MatrixXd{P * H.transpose() * (H * P * H.transpose() + R).inverse()};
+    std::cout << "Test2" << std::endl;
+    const auto state_change = VectorXd{K * r};
     // Note that state_change has rotations as 3 angles, while state has quaternions.
     // Thus we can't just add it to the state.
     assert(state_change.size() == state_.size() - 1 - N);
@@ -506,10 +515,12 @@ void MSCKF_EKF::MSCKF_Update(const VectorXd &r, const MatrixXd &H, const MatrixX
     assert(l == K.cols());
 
     // Update state estimate
+    std::cout << "Test3" << std::endl;
     updateState(state_change);
 
+    std::cout << "Test4" << std::endl;
     // Update covariance estimate
-    covariance_ = (MatrixXd::Identity(d, d) - K * H) * covariance_ * (MatrixXd::Identity(d, d) - K * H).transpose()
+    P = (MatrixXd::Identity(d, d) - K * H) * P * (MatrixXd::Identity(d, d) - K * H).transpose()
             + K * R * K.transpose();
 }
 
@@ -532,7 +543,7 @@ void MSCKF_EKF::singleFeatureH(const Vector3d &estimated_global_pos,
     const auto M = cameraIndices.size();
     const auto N = nCameraPoses();
 
-    H_X_j.setZero(2 * M, 12 + 6 * N);
+    H_X_j.setZero(2 * M, 15 + 6 * N); //changed from 12 to 15?
     H_f_j.resize(2 * M, 3);
 
     for (auto i = 0 * M; i < M; ++i) {
@@ -546,7 +557,7 @@ void MSCKF_EKF::singleFeatureH(const Vector3d &estimated_global_pos,
         J_i << 1, 0, -local_pos(0) / local_pos(2), 0, 1, -local_pos(1) / local_pos(2);
         J_i = J_i / local_pos(2);
 
-        H_X_j.block<2, 6>(2 * i, 12 + 6 * n) << J_i * skew_symmetric(local_pos), -J_i * C;
+        H_X_j.block<2, 6>(2 * i, 15 + 6 * n) << J_i * skew_symmetric(local_pos), -J_i * C; //changed from 12 to 15?
 
         H_f_j.block<2, 3>(2 * i, 0) << J_i * C;
     }
@@ -571,7 +582,7 @@ void MSCKF_EKF::updateState(const VectorXd &state_error) {
     // The state holds quaternions but state_error should hold angle errors.
     const auto N = nCameraPoses();
     assert(state_error.size() == state_.size() - 1 - N);
-    assert(state_error.size() == 12 + 6 * N);
+    assert(state_error.size() == 15 + 6 * N); //changed from 12 to 15?
 
     // Update quaternion multiplicatively
     auto dq = errorQuaternion(state_error.segment<3>(0));
@@ -582,7 +593,7 @@ void MSCKF_EKF::updateState(const VectorXd &state_error) {
 
     // Do the same for each camera state
     for (auto n = 0; n < N; ++n) {
-        dq = errorQuaternion(state_error.segment<3>(12 + 6 * n));
+        dq = errorQuaternion(state_error.segment<3>(12 + 6 * n)); //do we change from 12 to 15?
         cameraQuaternion(n) = dq * cameraQuaternion(n);
         cameraPosition(n) += state_error.segment<3>(15 + 6 * n);
     }
