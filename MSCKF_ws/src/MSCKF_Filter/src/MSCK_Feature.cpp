@@ -80,10 +80,7 @@ Vector3d estimateFeaturePosition(const VectorOfVector2d& measurements,
     
     for (int i = 0; i < M; ++i) {
         auto* cost_function = new MeasurementModelCostFunction(measurements, camera_rotation_estimates, camera_position_estimates);
-
         problem.AddResidualBlock(cost_function, nullptr, params);
-
-        std::cout << "Test6" << std::endl;
     }
 
     // Configure solver options

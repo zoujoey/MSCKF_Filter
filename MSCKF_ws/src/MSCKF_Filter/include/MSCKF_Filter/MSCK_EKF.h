@@ -77,7 +77,7 @@ public:
     //STATE COVARIANCE
     Eigen::MatrixXd F; //Error State Jacobian
     Eigen::MatrixXd G; //Error State Noise Jacobian 
-    Eigen::MatrixXd P; //TOTAL COVARIANCE MATRIX
+    Eigen::MatrixXd P{12,12}; //TOTAL COVARIANCE MATRIX
     Eigen::MatrixXd Pii; //Covariance Matrix of IMU
     Eigen::MatrixXd Pic; //Correlation Matrix between IMU and Camera
     Eigen::MatrixXd Pcc; //Covariance Matrix of Camera
@@ -103,10 +103,12 @@ public:
 
     // map of given image sequence number to internal sequence number
     std::map<ImageSeq, InternalSeq> image_seqs;
+
+    int num_updates{0};
     
     InternalSeq next_camera_seq{0};
     InternalSeq last_features_seq{0};
-    int min_track_length{5};
+    int min_track_length{3};
     int max_feature_tracks_per_update{30};
 
     //useful constants

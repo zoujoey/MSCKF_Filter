@@ -293,7 +293,7 @@ void MSCKF_EKF::add_camera_frame(ImageSeq image_seq){
     // Add sequence number mapping
     const auto internal_seq = addImageSeq(image_seq);
 
-    // Check if we already got the fAdeatures for this image
+    // Check if we already got the features for this image
     if (pending_features_.count(image_seq)) {
         std::cout << "Remove: " << pending_features_.size() << std::endl;
         add_features(image_seq, pending_features_[image_seq]);
@@ -360,18 +360,22 @@ void MSCKF_EKF::covariance_augmentation() {
 }
 
 //ADD FEATURES
-void MSCKF_EKF::add_features(ImageSeq image_seq, FeatureList features/*const MSCKF_Filter::ImageFeaturesConstPtr &msg*/) {
+void MSCKF_EKF::add_features(ImageSeq image_seq, FeatureList features) {
     // Did we already have addCameraFrame() called with this image_seq?
-    //std::cout << "Add Features Seq: " << image_seq << std::endl;
     //ROS_INFO("Add Features");
     if (image_seqs.count(image_seq)) {
-        std::cout << "Check" << std::endl;
+        // std::cout << "features size: " << features.size() << std::endl;
         for (auto &f : features) {
             last_features_seq = image_seqs[image_seq];
             features_[f.id].push_back(FeatureInstance{last_features_seq, f.point});
+            // if(features_[f.id].size() > 1){
+            //     std::cout << "Size at ID: " << features_[f.id].size() << std::endl;
+            // }
         }
+        //std::cout << "features_ size: " << features_.size() << std::endl;
         processFeatures();
-    } else {
+    } 
+    else {
         // We got the features before the frame (it's possible). Keep for later.
         pending_features_[image_seq] = features;
     }
@@ -380,10 +384,12 @@ void MSCKF_EKF::add_features(ImageSeq image_seq, FeatureList features/*const MSC
 void MSCKF_EKF::processFeatures(){
     ROS_INFO("Process Features");
     const auto features_to_use = filterFeatures();
+    std::cout << "Features to Use: " << features_to_use.size() << std::endl;
     if (features_to_use.empty()) {
-        //std::cout << "Empty" << std::endl;
+        std::cout << "Empty Features to Use" << std::endl;
         return;
     }
+    num_updates++;
     // Get stacked, uncorrelated residuals and Jacobian
     auto r_o = VectorXd{};  // residuals
     auto H_o = MatrixXd{};  // measurement Jacobian
@@ -403,15 +409,29 @@ std::vector<FeatureInstanceList> MSCKF_EKF::filterFeatures() {
     //std::cout << "features_ Size: " << features_.size() << std::endl;
     for (auto it = features_.cbegin(); it != features_.cend();) {
         const auto &instances = it->second;
+        //std::cout << "First Seq: " << instances.back().seq << std::endl;
+        //std::cout << "Last Seq: " << last_features_seq << std::endl;
+        std::cout << "Instance Size: " << instances.size() << std::endl;
         if (isFeatureExpired(instances)) {
             //std::cout << "Expired" << std::endl;
+            if(instances.size() > min_track_length){
+                std::cout << "Usable Instance: " << instances.size() << std::endl;
+            }
             // This feature does not exist in the latest frame, therefore it has moved out of the frame.
             if (isFeatureUsable(instances) && features_to_use.size() < max_feature_tracks_per_update) {
+               // std::cout << "Usable Instance: " << instances.size() << std::endl;
                 features_to_use.push_back(instances);
             }
+            // std::cout << "Feature Usable: " << isFeatureUsable(instances) << std::endl;
+            // std::cout << "Instances Size: " << instances.size() << std::endl;
+            // std::cout << "Instance Seq: " << instances.back().seq << std::endl;
+            // std::cout << "Last Seq: " << last_features_seq << std::endl;
+            //std::cout << "Features to Use Size: " << features_to_use.size()  << std::endl;
             // Erase the feature from the list
             it = features_.erase(it);
-        } else {
+        } 
+        else {
+            //std::cout << "Not Expired" << std::endl;
             ++it;
         }
     }
@@ -498,27 +518,23 @@ void MSCKF_EKF::MSCKF_Update(const VectorXd &r, const MatrixXd &H, const MatrixX
     assert(l == R.cols());
 
     // Calculate Kalman gain
-    std::cout << "Test1" << std::endl;
-    std::cout << "P Rows: " << P.rows() << std::endl;
-    std::cout << "P Cols: " << P.cols() << std::endl;
-    std::cout << "H Rows: " << H.rows() << std::endl;
-    std::cout << "H Cols: " << H.cols() << std::endl;
-    std::cout << "R Size: " << R.size() << std::endl;
+    // std::cout << "P Rows: " << P.rows() << std::endl;
+    // std::cout << "P Cols: " << P.cols() << std::endl;
+    // std::cout << "H Rows: " << H.rows() << std::endl;
+    // std::cout << "H Cols: " << H.cols() << std::endl;
+    // std::cout << "R Size: " << R.size() << std::endl;
 
     const auto K = MatrixXd{P * H.transpose() * (H * P * H.transpose() + R).inverse()};
-    std::cout << "Test2" << std::endl;
     const auto state_change = VectorXd{K * r};
     // Note that state_change has rotations as 3 angles, while state has quaternions.
     // Thus we can't just add it to the state.
-    assert(state_change.size() == state_.size() - 1 - N);
+    assert(state_change.size() == x.size() - 1 - N);
     assert(d == K.rows());
     assert(l == K.cols());
 
     // Update state estimate
-    std::cout << "Test3" << std::endl;
     updateState(state_change);
 
-    std::cout << "Test4" << std::endl;
     // Update covariance estimate
     P = (MatrixXd::Identity(d, d) - K * H) * P * (MatrixXd::Identity(d, d) - K * H).transpose()
             + K * R * K.transpose();
@@ -581,7 +597,7 @@ void MSCKF_EKF::updateState(const VectorXd &state_error) {
     ROS_INFO("Update State");
     // The state holds quaternions but state_error should hold angle errors.
     const auto N = nCameraPoses();
-    assert(state_error.size() == state_.size() - 1 - N);
+    assert(state_error.size() == x.size() - 1 - N);
     assert(state_error.size() == 15 + 6 * N); //changed from 12 to 15?
 
     // Update quaternion multiplicatively

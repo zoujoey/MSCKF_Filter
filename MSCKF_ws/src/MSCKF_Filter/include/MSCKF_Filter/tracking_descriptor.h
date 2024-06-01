@@ -34,6 +34,7 @@ class TrackDescriptor{
         void store_feature_tracks(const std::vector<cv::KeyPoint> &keypoints, const std::vector<size_t> ids, uint32_t image_seq);
         void draw_feature_tracks(cv::Mat &output_image);
         static bool compare_response(cv::KeyPoint first, cv::KeyPoint second);
+        int generateFeatureID();
 
         //FAST feature detection
         void perform_FAST(const cv::Mat &img, cv::Mat mask, std::vector<cv::KeyPoint> &pts);
@@ -45,7 +46,7 @@ class TrackDescriptor{
         Eigen::Vector2f undistort_f_fisheye(const Eigen::Vector2f &uv_dist);
 
         //Matching
-        void robust_match(const std::vector<cv::KeyPoint> &pts0, const std::vector<cv::KeyPoint> &pts1, const cv::Mat &desc0,
+        void robust_match(const std::vector<cv::KeyPoint> &pts0, std::vector<cv::KeyPoint> &pts1, const cv::Mat &desc0,
                     const cv::Mat &desc1, std::vector<cv::DMatch> &matches);
         void robust_ratio_test(std::vector<std::vector<cv::DMatch>> &matches);
         void robust_symmetry_test(std::vector<std::vector<cv::DMatch>> &matches1, std::vector<std::vector<cv::DMatch>> &matches2,

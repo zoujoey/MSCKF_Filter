@@ -56,6 +56,7 @@ void MSCKF_Node::image_callback(const sensor_msgs::ImageConstPtr &msg) {
         filter.add_camera_frame(msg->header.seq);
     }
     //publish_odom();
+    //std::cout << "Num Updates: " << filter.num_updates << std::endl;
 }
 
 
