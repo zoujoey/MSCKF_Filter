@@ -108,7 +108,7 @@ public:
     
     InternalSeq next_camera_seq{0};
     InternalSeq last_features_seq{0};
-    int min_track_length{3};
+    int min_track_length{2};
     int max_feature_tracks_per_update{30};
 
     //useful constants

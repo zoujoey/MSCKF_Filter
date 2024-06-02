@@ -280,7 +280,7 @@ void MSCKF_EKF::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro
 
 //ADD CAMERA FRAME
 void MSCKF_EKF::add_camera_frame(ImageSeq image_seq){
-    //ROS_INFO("Add Cam Frame");
+    ROS_INFO("Add Cam Frame");
     N = nCameraPoses();
     //std::cout << "N Size: " << N << std::endl;
 
@@ -384,9 +384,9 @@ void MSCKF_EKF::add_features(ImageSeq image_seq, FeatureList features) {
 void MSCKF_EKF::processFeatures(){
     ROS_INFO("Process Features");
     const auto features_to_use = filterFeatures();
-    std::cout << "Features to Use: " << features_to_use.size() << std::endl;
+    //std::cout << "Features to Use: " << features_to_use.size() << std::endl;
     if (features_to_use.empty()) {
-        std::cout << "Empty Features to Use" << std::endl;
+        //std::cout << "Empty Features to Use" << std::endl;
         return;
     }
     num_updates++;
@@ -411,12 +411,13 @@ std::vector<FeatureInstanceList> MSCKF_EKF::filterFeatures() {
         const auto &instances = it->second;
         //std::cout << "First Seq: " << instances.back().seq << std::endl;
         //std::cout << "Last Seq: " << last_features_seq << std::endl;
-        std::cout << "Instance Size: " << instances.size() << std::endl;
+        //std::cout << "Instance Size: " << instances.size() << std::endl;
         if (isFeatureExpired(instances)) {
             //std::cout << "Expired" << std::endl;
             if(instances.size() > min_track_length){
                 std::cout << "Usable Instance: " << instances.size() << std::endl;
             }
+            //std::cout << "features_to_use: " << features_to_use.size() << std::endl;
             // This feature does not exist in the latest frame, therefore it has moved out of the frame.
             if (isFeatureUsable(instances) && features_to_use.size() < max_feature_tracks_per_update) {
                // std::cout << "Usable Instance: " << instances.size() << std::endl;
@@ -493,6 +494,9 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
 
         // After that we expect the size to be smaller:
         const auto new_dim = 2 * M - 3;
+        std::cout << "new_dim: " << new_dim << std::endl;
+        std::cout << "M: " << M << std::endl;
+        std::cout << "Residuals: " << residuals.size() << std::endl;
         assert(new_dim == residuals.size());
         assert(new_dim == H_X_j.rows());
 
@@ -605,7 +609,7 @@ void MSCKF_EKF::updateState(const VectorXd &state_error) {
     quaternion() = dq * quaternion();
 
     // Update rest of IMU state additively
-    state_.segment<9>(4) += state_error.segment<9>(3);
+    x.segment<9>(4) += state_error.segment<9>(3);
 
     // Do the same for each camera state
     for (auto n = 0; n < N; ++n) {

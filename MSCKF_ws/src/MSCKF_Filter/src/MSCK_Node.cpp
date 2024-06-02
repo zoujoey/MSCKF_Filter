@@ -13,6 +13,8 @@ MSCKF_Node::MSCKF_Node(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
 
     features_sub = nh_.subscribe("/features", 10, &MSCKF_Node::feature_callback, this);
 
+    odom_pub = nh_.advertise<nav_msgs::Odometry>("odom", 10);
+
     std::cout << "Initialize Call" << std::endl;
     filter.init(); // Call initialization function from MSCKF_Filter
 }
@@ -42,7 +44,7 @@ void MSCKF_Node::imu_callback(const sensor_msgs::ImuConstPtr& msg) {
         filter.imu_last_time = imu_time;
         return;
     }   
-    //publish_odom(); 
+    publish_odom(); 
     filter.imu_dt = imu_time - filter.imu_last_time;
     filter.imu_last_time = imu_time;
 }
@@ -55,7 +57,7 @@ void MSCKF_Node::image_callback(const sensor_msgs::ImageConstPtr &msg) {
         //ROS_INFO("Image Received");
         filter.add_camera_frame(msg->header.seq);
     }
-    //publish_odom();
+    publish_odom();
     //std::cout << "Num Updates: " << filter.num_updates << std::endl;
 }
 

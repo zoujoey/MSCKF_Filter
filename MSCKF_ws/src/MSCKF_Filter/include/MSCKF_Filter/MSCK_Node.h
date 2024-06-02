@@ -4,6 +4,8 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <image_transport/image_transport.h>
 #include "MSCKF_Filter/ImageFeatures.h"
 #include "MSCKF_Filter/MSCK_EKF.h"
