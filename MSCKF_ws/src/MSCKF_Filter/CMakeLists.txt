@@ -61,7 +61,6 @@ target_link_libraries(msckf_filter
 )
 
 add_library(feature_tracking
-  src/tracking_nodelet.cpp
   src/tracking_descriptor.cpp
 )
 target_link_libraries(feature_tracking

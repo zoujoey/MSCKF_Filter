@@ -1,8 +1,0 @@
-prefix=/home/zoujoey/MSCKF_Filter/MSCKF_ws/install
-
-Name: MSCKF_Filter
-Description: Description of MSCKF_Filter
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

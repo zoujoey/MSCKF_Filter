@@ -64,28 +64,30 @@ namespace MSCKalman {
         for(int i = 0; i < keypoints.size(); i++){
             const auto &k = keypoints[i];
             const auto &feature_id = ids[i];
-            //const auto &feature_id = k.class_id;
 
-            feature_tracks[feature_id].latest_image_seq = image_seq;
-            feature_tracks[feature_id].points.push_back(k);
+            auto &track = feature_tracks[feature_id];
+            if (track.points.empty()) {
+                // This is a new track
+                track.frame_count = 0;
+            }
+            track.latest_image_seq = image_seq;
+            track.frame_count++; // Increment the frame count for this feature
+            track.points.push_back(k);
         }
 
-        //std::cout << "Store Feature Tracks Before Prune: " << feature_tracks.size() << std::endl;
-
+        // Print the lifetime of the features being removed
         for (auto it = feature_tracks.cbegin(); it != feature_tracks.cend();) {
             const auto &track = it->second;
             if (track.latest_image_seq != image_seq) {
-                // This feature does not exist in the latest frame. Erase this track from the map
+                // This feature does not exist in the latest frame. Print its lifetime and erase this track from the map
+                std::cout << "Feature ID: " << it->first << " Lifetime: " << track.frame_count << " frames" << std::endl;
                 it = feature_tracks.erase(it);
             } 
             else {
                 ++it;
             }
-            //std::cout << "Tracks at ID: " << it->second.points.size() << std::endl;
         }
-        //std::cout << "Num Feature Tracks: " << feature_tracks.size() << std::endl;
     }
-
     void TrackDescriptor::draw_feature_tracks(cv::Mat &output_image){
         auto drawn = 0;
         auto longest_track = 0ul;

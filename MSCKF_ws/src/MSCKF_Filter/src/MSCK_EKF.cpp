@@ -423,11 +423,11 @@ std::vector<FeatureInstanceList> MSCKF_EKF::filterFeatures() {
                // std::cout << "Usable Instance: " << instances.size() << std::endl;
                 features_to_use.push_back(instances);
             }
-            // std::cout << "Feature Usable: " << isFeatureUsable(instances) << std::endl;
-            // std::cout << "Instances Size: " << instances.size() << std::endl;
-            // std::cout << "Instance Seq: " << instances.back().seq << std::endl;
-            // std::cout << "Last Seq: " << last_features_seq << std::endl;
-            //std::cout << "Features to Use Size: " << features_to_use.size()  << std::endl;
+            std::cout << "Feature Usable: " << isFeatureUsable(instances) << std::endl;
+            std::cout << "Instances Size: " << instances.size() << std::endl;
+            std::cout << "Instance Seq: " << instances.back().seq << std::endl;
+            std::cout << "Last Seq: " << last_features_seq << std::endl;
+            std::cout << "Features to Use Size: " << features_to_use.size()  << std::endl;
             // Erase the feature from the list
             it = features_.erase(it);
         } 

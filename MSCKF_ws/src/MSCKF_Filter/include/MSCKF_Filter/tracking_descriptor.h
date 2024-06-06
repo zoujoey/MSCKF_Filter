@@ -17,6 +17,7 @@ namespace MSCKalman {
 
 struct FeatureTrack {
     uint32_t latest_image_seq;
+    uint32_t frame_count; // Add this line
     std::vector<cv::KeyPoint> points;
 };
 
