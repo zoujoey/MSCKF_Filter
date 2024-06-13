@@ -34,6 +34,7 @@ struct ImageFeature {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     FeatureId id;
     Vector2d point;
+    uint32_t lifetime;
 };
 
 // Feature measurement tied to a specific image frame
@@ -41,6 +42,7 @@ struct FeatureInstance {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     InternalSeq seq;
     Vector2d point;
+    uint32_t lifetime;
 };
 //List of Features with Eigen 
 using FeatureList = std::vector<ImageFeature>;

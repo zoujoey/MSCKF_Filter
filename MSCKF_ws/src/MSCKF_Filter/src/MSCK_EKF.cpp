@@ -117,12 +117,12 @@ void MSCKF_EKF::init() {
 //INTIALIZE GRAVITY BIAS 
 void MSCKF_EKF::gravity_bias_initialization() {
     // Implement your gravity bias initialization function here
-    ROS_INFO("Starting Initialization");
+  //  ROS_INFO("Starting Initialization");
     Eigen::Vector3d sum_gyr = Eigen::Vector3d::Zero();
     Eigen::Vector3d sum_acc = Eigen::Vector3d::Zero();
     Eigen::Vector3d imu_gravity = Eigen::Vector3d::Zero();
 
-    ROS_INFO("Entering Loop");
+    //ROS_INFO("Entering Loop");
     for(const auto& IMU_Msg : imu_init_buffer){
        Eigen::Vector3d temp_acc_m = Eigen::Vector3d::Zero();
        Eigen::Vector3d temp_gyr_m = Eigen::Vector3d::Zero();
@@ -133,11 +133,11 @@ void MSCKF_EKF::gravity_bias_initialization() {
        sum_acc += temp_acc_m;
        sum_gyr += temp_gyr_m;
     }
-    ROS_INFO("Gyr bias and IMU gravity");
+   // ROS_INFO("Gyr bias and IMU gravity");
     gyr_bias = sum_gyr / imu_init_buffer.size();
     imu_gravity = acc_m / imu_init_buffer.size();
     
-    ROS_INFO("Set gravity");
+//    ROS_INFO("Set gravity");
     gravity(2) = -(imu_gravity.norm());
 
     //std::cout << "Gyr Bias: " << gyr_bias << std::endl;
@@ -148,9 +148,9 @@ void MSCKF_EKF::gravity_bias_initialization() {
     double s = v.norm();
     double c = gravity.dot(-imu_gravity);
     Eigen::Matrix3d rotation_c = Eigen::Matrix3d::Identity() + skew_symmetric(v) + (skew_symmetric(v))*(skew_symmetric(v))*((1 - c) / s*s);
-    ROS_INFO("Set rotation_q");
+ //   ROS_INFO("Set rotation_q");
     rotation_q = Eigen::Quaterniond(rotation_c);
-    ROS_INFO("Exit init");
+    // ROS_INFO("Exit init");
 }
 
 //IMU PROPAGATION
@@ -280,7 +280,7 @@ void MSCKF_EKF::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro
 
 //ADD CAMERA FRAME
 void MSCKF_EKF::add_camera_frame(ImageSeq image_seq){
-    ROS_INFO("Add Cam Frame");
+    // ROS_INFO("Add Cam Frame");
     N = nCameraPoses();
     //std::cout << "N Size: " << N << std::endl;
 
@@ -295,9 +295,10 @@ void MSCKF_EKF::add_camera_frame(ImageSeq image_seq){
 
     // Check if we already got the features for this image
     if (pending_features_.count(image_seq)) {
-        std::cout << "Remove: " << pending_features_.size() << std::endl;
+        std::cout << "Pending_Features_Size: " << pending_features_.size() << std::endl;
         add_features(image_seq, pending_features_[image_seq]);
         pending_features_.erase(image_seq);
+        std::cout << "Image_seq: " << image_seq << std::endl;
     }
 }
 
@@ -378,11 +379,12 @@ void MSCKF_EKF::add_features(ImageSeq image_seq, FeatureList features) {
     else {
         // We got the features before the frame (it's possible). Keep for later.
         pending_features_[image_seq] = features;
+        std::cout << "pending features:" << pending_features_.size() << std::endl;;
     }
 }
 
 void MSCKF_EKF::processFeatures(){
-    ROS_INFO("Process Features");
+    // ROS_INFO("Process Features");
     const auto features_to_use = filterFeatures();
     //std::cout << "Features to Use: " << features_to_use.size() << std::endl;
     if (features_to_use.empty()) {
@@ -404,38 +406,39 @@ void MSCKF_EKF::processFeatures(){
 }
 
 std::vector<FeatureInstanceList> MSCKF_EKF::filterFeatures() {
-    ROS_INFO("Filter Features");
     auto features_to_use = std::vector<FeatureInstanceList>{};
-    //std::cout << "features_ Size: " << features_.size() << std::endl;
+    std::size_t total_features = 0;
+    std::size_t usable_features = 0;
+    std::size_t expired_features = 0;
+    std::size_t passed_through_features = 0;
+    total_features = features_.size();
+
     for (auto it = features_.cbegin(); it != features_.cend();) {
         const auto &instances = it->second;
-        //std::cout << "First Seq: " << instances.back().seq << std::endl;
-        //std::cout << "Last Seq: " << last_features_seq << std::endl;
-        //std::cout << "Instance Size: " << instances.size() << std::endl;
+        if (isFeatureUsable(instances) && features_to_use.size() < max_feature_tracks_per_update) {
+            usable_features++;
+        }
         if (isFeatureExpired(instances)) {
-            //std::cout << "Expired" << std::endl;
-            if(instances.size() > min_track_length){
-                std::cout << "Usable Instance: " << instances.size() << std::endl;
+            expired_features += 1;
+            if (instances.size() >= 3){
+         //   std::cout<<"Feature " << expired_features << " Expired Size: " << instances.size() << std::endl;
             }
-            //std::cout << "features_to_use: " << features_to_use.size() << std::endl;
             // This feature does not exist in the latest frame, therefore it has moved out of the frame.
             if (isFeatureUsable(instances) && features_to_use.size() < max_feature_tracks_per_update) {
-               // std::cout << "Usable Instance: " << instances.size() << std::endl;
+                passed_through_features += 1;
                 features_to_use.push_back(instances);
             }
-            std::cout << "Feature Usable: " << isFeatureUsable(instances) << std::endl;
-            std::cout << "Instances Size: " << instances.size() << std::endl;
-            std::cout << "Instance Seq: " << instances.back().seq << std::endl;
-            std::cout << "Last Seq: " << last_features_seq << std::endl;
-            std::cout << "Features to Use Size: " << features_to_use.size()  << std::endl;
             // Erase the feature from the list
             it = features_.erase(it);
-        } 
-        else {
-            //std::cout << "Not Expired" << std::endl;
+        } else {
             ++it;
         }
     }
+    std::cout << "Total features prior to filter: " << total_features << std::endl;
+    std::cout << "Usable features: " << usable_features << std::endl;
+    std::cout << "Expired features: " << expired_features << std::endl;
+    std::cout << "Features passed through: " << passed_through_features << std::endl;
+
     return features_to_use;
 }
 
@@ -451,26 +454,25 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
                                    VectorXd &r_o,
                                    MatrixXd &H_o,
                                    MatrixXd &R_o) {
-    // Implement your feature collapse function here
-    ROS_INFO("Estimate Feature Positions");
     double image_variance = 0.1;
     const auto total_rows = sizeOfNestedContainers(features);
     const auto N = nCameraPoses();
+    std::cout << "CameraPoses: " << N << std::endl;
     const auto L = features.size();
     const auto n_residuals = 2 * total_rows - 3 * L;
     r_o.resize(n_residuals);  // residuals
-    H_o.resize(n_residuals, 15 + 6 * N);  // measurement Jacobian, changed from 12 to 15?
+    H_o.resize(n_residuals, 15 + 6 * N);  // measurement Jacobian
 
-    auto total_i = 0;
+    int total_i = 0;
+    int total_residuals = 0;  // keep track of the actual residual count
+
     for (const auto &f : features) {
-        // Collect the feature measurements and corresponding camera pose estimates
-        // todo: seems inefficient
         const auto M = f.size();
 
-        auto measurements = VectorOfVector2d{};
-        auto camera_rotations = VectorOfMatrix3d{};
-        auto camera_positions = VectorOfVector3d{};
-        auto camera_indices = std::vector<int>{};
+        VectorOfVector2d measurements;
+        VectorOfMatrix3d camera_rotations;
+        VectorOfVector3d camera_positions;
+        std::vector<int> camera_indices;
 
         for (const auto &instance : f) {
             measurements.push_back(instance.point);
@@ -480,39 +482,45 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
             camera_indices.push_back(n);
         }
 
-        auto residuals = VectorXd{2 * M};
+        VectorXd residuals(2 * M);
         auto estimated_pos = estimateFeaturePosition(measurements, camera_rotations, camera_positions, residuals);
         auto estimated_local = Vector3d{camera_rotations.front() * (estimated_pos - camera_positions.front())};
 
-        // Calculate Jacobians for this feature estimate
-        auto H_X_j = MatrixXd{2 * M, 15 + 6 * N}; //changed from 12 to 15?
-        auto H_f_j = MatrixXd{2 * M, 3};
+        MatrixXd H_X_j(2 * M, 15 + 6 * N);
+        MatrixXd H_f_j(2 * M, 3);
         singleFeatureH(estimated_pos, camera_indices, H_X_j, H_f_j);
 
-        // Get uncorrelated residuals
         projectLeftNullspace(H_f_j, residuals, H_X_j);
 
-        // After that we expect the size to be smaller:
         const auto new_dim = 2 * M - 3;
-        std::cout << "new_dim: " << new_dim << std::endl;
-        std::cout << "M: " << M << std::endl;
-        std::cout << "Residuals: " << residuals.size() << std::endl;
-        assert(new_dim == residuals.size());
-        assert(new_dim == H_X_j.rows());
+        // std::cout << "new_dim: " << new_dim << std::endl;
+        // std::cout << "M: " << M << std::endl;
+        // std::cout << "Residuals: " << residuals.size() << std::endl;
 
-        // Push onto stacked matrices (todo: simplify)
-        r_o.segment(total_i, new_dim) << residuals;
-        H_o.block(total_i, 0, new_dim, 15 + 6 * N) << H_X_j; //changed from 12 to 15?
+        if (new_dim != residuals.size()) {
+            std::cout << "Dimension mismatch, skipping feature." << std::endl;
+            continue;  // skip this feature
+        }
+
+        r_o.segment(total_i, new_dim) = residuals;
+        H_o.block(total_i, 0, new_dim, 15 + 6 * N) = H_X_j;
 
         total_i += new_dim;
+        total_residuals += new_dim;
     }
-    R_o.resize(n_residuals, n_residuals);
-    R_o = image_variance * MatrixXd::Identity(n_residuals, n_residuals);
+
+    // Resize to the actual residual count
+    r_o.conservativeResize(total_residuals);
+    H_o.conservativeResize(total_residuals, 15 + 6 * N);
+
+    R_o.resize(total_residuals, total_residuals);
+    R_o = image_variance * MatrixXd::Identity(total_residuals, total_residuals);
 }
+
 
 //MSCKF_UPDATE
 void MSCKF_EKF::MSCKF_Update(const VectorXd &r, const MatrixXd &H, const MatrixXd &R) {
-    ROS_INFO("MSCKF Update");
+    // ROS_INFO("MSCKF Update");
     const auto l = r.size();
     const auto N = nCameraPoses();
     const auto d = 15 + 6 * N; //changed from 12 to 15?
@@ -544,22 +552,25 @@ void MSCKF_EKF::MSCKF_Update(const VectorXd &r, const MatrixXd &H, const MatrixX
             + K * R * K.transpose();
 }
 
-void MSCKF_EKF::projectLeftNullspace(const MatrixXd &H_f_j, VectorXd &r, MatrixXd &H_X_j) {
-    ROS_INFO("Project Left Nullspace");
-    // Implement your MSCKF update function here
-    // As in Mourikis, A is matrix whose columns form basic of left nullspace of H_f.
-    // Note left nullspace == kernel of transpose
-    MatrixXd A = H_f_j.transpose().fullPivLu().kernel();
-    H_X_j = (A.transpose() * H_X_j).eval();
-    r = (A.transpose() * r).eval();
+void MSCKF_EKF::projectLeftNullspace(const Eigen::MatrixXd &H_f_j,
+                                     Eigen::VectorXd &residuals,
+                                     Eigen::MatrixXd &H_X_j) {
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(H_f_j, Eigen::ComputeFullU);
+    const Eigen::MatrixXd &U = svd.matrixU();
+    const int null_space_dim = H_f_j.rows() - H_f_j.cols();
+    Eigen::MatrixXd A = U.rightCols(null_space_dim); // Get the right nullspace
+
+    residuals = A.transpose() * residuals;
+    H_X_j = A.transpose() * H_X_j;
 }
+
 
 
 void MSCKF_EKF::singleFeatureH(const Vector3d &estimated_global_pos,
                          const std::vector<int> &cameraIndices,
                          MatrixXd &H_X_j,
                          MatrixXd &H_f_j) {
-    ROS_INFO("Single Feature H");
+    // ROS_INFO("Single Feature H");
     const auto M = cameraIndices.size();
     const auto N = nCameraPoses();
 
@@ -583,7 +594,7 @@ void MSCKF_EKF::singleFeatureH(const Vector3d &estimated_global_pos,
     }
 }
 void MSCKF_EKF::qrDecomposition(VectorXd &r, MatrixXd &H, MatrixXd &R) {
-    ROS_INFO("QR Decomp");
+    // ROS_INFO("QR Decomp");
     auto qr = H.householderQr();
     const auto m = H.rows();
     const auto n = H.cols();
@@ -598,7 +609,7 @@ void MSCKF_EKF::qrDecomposition(VectorXd &r, MatrixXd &H, MatrixXd &R) {
     R = Q1.transpose() * R * Q1;
 }
 void MSCKF_EKF::updateState(const VectorXd &state_error) {
-    ROS_INFO("Update State");
+    // ROS_INFO("Update State");
     // The state holds quaternions but state_error should hold angle errors.
     const auto N = nCameraPoses();
     assert(state_error.size() == x.size() - 1 - N);

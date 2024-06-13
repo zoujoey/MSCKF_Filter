@@ -108,7 +108,7 @@ public:
     
     InternalSeq next_camera_seq{0};
     InternalSeq last_features_seq{0};
-    int min_track_length{5};
+    int min_track_length{4};
     int max_feature_tracks_per_update{30};
 
     //useful constants
@@ -119,7 +119,7 @@ public:
     double imu_last_time;
     bool imu_first_data;
     int N; //num camera poses
-    int N_max{30};
+    int N_max{200};
     bool use_qr_decomposition;
 
     // Accessors for parts of state and covariance

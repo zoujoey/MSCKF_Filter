@@ -16,7 +16,6 @@ namespace MSCKalman {
         grid_x = 3;
         grid_y = 5;
         knn_ratio = 0.70;
-
         //Initialize camera matrix and distortion
         cam_matrix(0,0) = 458.654;
         cam_matrix(0,1) = 0;
@@ -27,7 +26,6 @@ namespace MSCKalman {
         cam_matrix(2,0) = 0;
         cam_matrix(2,1) = 0;
         cam_matrix(2,2) = 1;
-
         distortion_coefficients(0) = -0.28340811;
         distortion_coefficients(1) = 0.07395907;
         distortion_coefficients(2) = 0.00019359;
@@ -45,17 +43,21 @@ namespace MSCKalman {
         MSCKF_Filter::ImageFeatures msg;
         msg.image_seq = cv_image->header.seq;
 
-        int i = 0; 
         for(int i = 0; i < keypoints.size(); i++){
             const auto &k = keypoints[i];
             MSCKF_Filter::Feature f;
             f.position.x = k.pt.x;
             f.position.y = k.pt.y;
-            f.id = ids[i] + 1;
-            //f.id = k.class_id;
+            f.id = ids[i];
             f.response = k.response;
+
+            // Add the lifetime of the feature
+            auto &track = feature_tracks[ids[i]];
+            f.lifetime = track.frame_count;
+            if (f.lifetime >= 4){
+            // std::cout << "Feature ID: " << ids[i]+1 << " Lifetime: " << f.lifetime << " frames" << std::endl;
+            }
             msg.features.push_back(f);
-            ++i;
         }
         features_pub.publish(msg);
     }
@@ -64,7 +66,6 @@ namespace MSCKalman {
         for(int i = 0; i < keypoints.size(); i++){
             const auto &k = keypoints[i];
             const auto &feature_id = ids[i];
-
             auto &track = feature_tracks[feature_id];
             if (track.points.empty()) {
                 // This is a new track
@@ -78,9 +79,7 @@ namespace MSCKalman {
         // Print the lifetime of the features being removed
         for (auto it = feature_tracks.cbegin(); it != feature_tracks.cend();) {
             const auto &track = it->second;
-            if (track.latest_image_seq != image_seq) {
-                // This feature does not exist in the latest frame. Print its lifetime and erase this track from the map
-                std::cout << "Feature ID: " << it->first << " Lifetime: " << track.frame_count << " frames" << std::endl;
+            if (track.latest_image_seq != image_seq) {        
                 it = feature_tracks.erase(it);
             } 
             else {
@@ -88,15 +87,63 @@ namespace MSCKalman {
             }
         }
     }
+    // void TrackDescriptor::store_feature_tracks(const std::vector<cv::KeyPoint> &keypoints, const std::vector<size_t> ids, uint32_t image_seq) {
+    //     for (int i = 0; i < keypoints.size(); i++) {
+    //         const auto &k = keypoints[i];
+    //         const auto &feature_id = ids[i];
+
+    //         auto &track = feature_tracks[feature_id];
+    //         if (track.points.empty()) {
+    //             // This is a new track
+    //             track.frame_count = 0;
+    //         }
+    //         track.latest_image_seq = image_seq;
+    //         track.frame_count++; // Increment the frame count for this feature
+    //         track.points.push_back(k);
+    //     }
+
+    //     // Prepare to publish and delete old features
+    //     std::vector<size_t> features_to_delete;
+    //     for (auto it = feature_tracks.cbegin(); it != feature_tracks.cend();) {
+    //         const auto &track = it->second;
+    //         if (track.latest_image_seq != image_seq) {
+    //             if (track.frame_count > 30) {
+    //                 // Publish feature
+    //                 MSCKF_Filter::ImageFeatures msg;
+    //                 msg.image_seq = image_seq;
+
+    //                 for (const auto &pt : track.points) {
+    //                     MSCKF_Filter::Feature f;
+    //                     f.position.x = pt.pt.x;
+    //                     f.position.y = pt.pt.y;
+    //                     f.id = it->first;
+    //                     f.response = pt.response;
+    //                     f.lifetime = track.frame_count;
+    //                     msg.features.push_back(f);
+    //                 }
+    //                 features_pub.publish(msg);
+
+    //                 // Mark for deletion
+    //                 features_to_delete.push_back(it->first);
+    //             }
+    //             it = feature_tracks.erase(it);
+    //         } else {
+    //             ++it;
+    //         }
+    //     }
+
+    //     // Delete the features marked for deletion
+    //     for (const auto &id : features_to_delete) {
+    //         feature_tracks.erase(id);
+    //     }
+    // }
+
     void TrackDescriptor::draw_feature_tracks(cv::Mat &output_image){
         auto drawn = 0;
         auto longest_track = 0ul;
 
-        //std::cout << "Draw Feature Tracks Size: " << feature_tracks.size() << std::endl;
         for (const auto &ft : feature_tracks) {
             const auto &points = ft.second.points;
-            // change color based on track length
-            //std::cout << "Points Size: " << points.size()  << std::endl;
 
             auto color = cv::Scalar(255, 255, 0, 1);  // yellow
             auto i = points.size();
@@ -116,7 +163,6 @@ namespace MSCKalman {
             }
             ++drawn;
         }
-        //std::cout << "Drew " << drawn << " tracks, the longest was: " << longest_track << std::endl;
     }
 
     void TrackDescriptor::image_callback(const sensor_msgs::ImageConstPtr& msg){
@@ -128,7 +174,6 @@ namespace MSCKalman {
             cam0_rgb = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::RGB8);
         }
         catch(cv_bridge::Exception& e){
-            std::cout << "cv_bridge exception: " << e.what() << std::endl;
             return;
         }
 
@@ -171,18 +216,9 @@ namespace MSCKalman {
 
         perform_detection(img, mask, new_points, new_desc, new_ids);
 
-        //std::cout << "Detected Points Size: " << new_points.size() << ", Image Seq: " << cam0_img_curr->header.seq << std::endl;
-        //std::cout << "New IDs Size: " << new_ids.size() << std::endl;
-
-        // draw_features(cam0_rgb, new_points);
-        // imagePub_.publish(cam0_rgb->toImageMsg());
-
         std::vector<cv::DMatch> matches_ll;
         robust_match(last_points, new_points, last_desc, new_desc, matches_ll);
 
-        //std::cout << "Matches Found: " << matches_ll.size() << std::endl;
-
-        //get good tracks
         std::vector<cv::KeyPoint> good_points;
         cv::Mat good_desc;
         std::vector<size_t> good_ids;
@@ -212,28 +248,7 @@ namespace MSCKalman {
         for(int i = 0; i < good_points.size(); i++){
             auto &k = good_points.at(i);
             k.class_id = good_ids[i];
-            //std::cout << "Class ID: " << k.class_id << std::endl;
         }
-
-        //std::cout << "Num Track Last: " << num_track_last << std::endl;
-
-        // for(const auto &m : matches_ll){
-        //     new_points[m.queryIdx].class_id = last_points[m.trainIdx].class_id;
-        // }
-
-        // for(int i = 0; i < new_points.size(); i++){
-        //     good_points.push_back(new_points[i]);
-        //     good_desc.push_back(new_desc.row(i));
-        // }
-
-
-
-        // for(int i = 0; i < new_points.size(); i++){
-        //     good_points.push_back(new_points[i]);
-        //     good_desc.push_back(new_desc.row(i));
-        // }
-
-        //std::cout << "Good Points Size: " << good_points.size() << std::endl;
 
         publish_features(cam0_img_curr, good_points, good_ids);
 
@@ -243,21 +258,17 @@ namespace MSCKalman {
 
         cv::drawKeypoints(output, good_points, output, -1, cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
         
-        // draw_features(cam0_rgb, good_points);
-        // image_pub.publish(cam0_rgb->toImageMsg());
-
         draw_feature_tracks(output);
 
         image_pub.publish(cam0_rgb->toImageMsg());
 
-        //std::cout << "Good Points Size: " << good_points.size() << ", Image Seq: " << cam0_img_curr->header.seq << std::endl;
-
         last_img = img;
         last_mask = mask;
         last_points = good_points;
-        last_ids = good_ids;
         last_desc = good_desc;
+        last_ids = good_ids;
     }
+
 
     void TrackDescriptor::perform_detection(const cv::Mat &img, const cv::Mat &mask, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, std::vector<size_t> &ids){
         assert(keypoints.empty());

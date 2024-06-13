@@ -8,7 +8,7 @@ MSCKF_Node::MSCKF_Node(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
     ROS_INFO("Subscribe to IMU");
 
     auto image_transport = image_transport::ImageTransport{nh_};
-    image_sub = image_transport.subscribe("cam0/image_raw", 1, &MSCKF_Node::image_callback, this);
+    image_sub = image_transport.subscribe("cam0/image_raw", 10, &MSCKF_Node::image_callback, this);
     ROS_INFO("Subscribe to CAM");
 
     features_sub = nh_.subscribe("/features", 10, &MSCKF_Node::feature_callback, this);
@@ -20,7 +20,7 @@ MSCKF_Node::MSCKF_Node(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
 }
 
 void MSCKF_Node::imu_callback(const sensor_msgs::ImuConstPtr& msg) {
-    //ROS_INFO("IMU Callback");
+    ROS_INFO("IMU Callback");
     filter.acc_m << msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z;
     filter.gyr_m << msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z;
 
@@ -51,30 +51,39 @@ void MSCKF_Node::imu_callback(const sensor_msgs::ImuConstPtr& msg) {
 
 /**/
 void MSCKF_Node::image_callback(const sensor_msgs::ImageConstPtr &msg) {
-    //ROS_INFO("Recieved Image");
+
     //std::cout << "Seq2: " << msg->header.seq << std::endl;
     if(filter.is_gravity_init){
         //ROS_INFO("Image Received");
         filter.add_camera_frame(msg->header.seq);
+        publish_odom();
+        ROS_INFO("Recieved Image");
     }
-    publish_odom();
+
     //std::cout << "Num Updates: " << filter.num_updates << std::endl;
 }
 
 
 void MSCKF_Node::feature_callback(const MSCKF_Filter::ImageFeaturesConstPtr &msg) {
     // Implement your feature callback function here
-    auto features = FeatureList{};
-    for (const auto &f : msg->features) {
-        features.push_back(ImageFeature{f.id, {f.position.x, f.position.y}});
-        //std::cout << "Num Features: " << features.size() << std::endl;
+    if(filter.is_gravity_init){
+        ROS_INFO("Recieved Feature");
+        auto features = FeatureList{};
+        for (const auto &f : msg->features) {
+            features.push_back(ImageFeature{f.id, {f.position.x, f.position.y}, f.lifetime});
+            //std::cout << "Num Features: " << features.size() << std::endl;
+            //if (f.lifetime >= 4){
+            // std::cout << "Feature ID: " << f.id << " Lifetime: " << f.lifetime << " frames" << std::endl;
+            //}
+        }
+        filter.add_features(msg->image_seq, features);
     }
-    filter.add_features(msg->image_seq, features);
 }
 
 
 void MSCKF_Node::publish_odom() {
     // Implement your odom publishing function here
+    ROS_INFO("Publish Odom");
     nav_msgs::Odometry imu_odom;
     imu_odom.header.frame_id = "world";
     imu_odom.pose.pose.position.x = filter.imu_pos(0);
