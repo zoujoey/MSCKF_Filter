@@ -22,8 +22,7 @@ public:
 private:
     //Callback Functions
     void imu_callback(const sensor_msgs::ImuConstPtr &msg);
-    void image_callback(const sensor_msgs::ImageConstPtr &msg);
-    void feature_callback(const MSCKF_Filter::ImageFeaturesConstPtr &msg);
+    void image_feature_callback(const MSCKF_Filter::ImageFeaturesConstPtr &msg);
     
     //Odometry Functions
     void publish_odom();

@@ -3,7 +3,7 @@
 namespace MSCKalman {
     TrackDescriptor::TrackDescriptor(const ros::NodeHandle &nh, const ros::NodeHandle &pnh) : nh_(nh), pnh_(pnh) {
         auto image_transport = image_transport::ImageTransport{nh_};
-        features_pub = nh_.advertise<MSCKF_Filter::ImageFeatures>("features", 10);
+        features_pub = nh_.advertise<MSCKF_Filter::ImageFeatures>("features", 3);
         image_pub = image_transport.advertise("output_image", 1);
         image_sub = image_transport.subscribe("/cam0/image_raw", 3, &TrackDescriptor::image_callback, this);
         imagePub_ = nh_.advertise<sensor_msgs::Image>("feature_image", 1000);

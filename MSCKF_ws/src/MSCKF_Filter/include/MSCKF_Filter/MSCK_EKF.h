@@ -119,7 +119,7 @@ public:
     double imu_last_time;
     bool imu_first_data;
     int N; //num camera poses
-    int N_max{200};
+    int N_max{30};
     bool use_qr_decomposition;
 
     // Accessors for parts of state and covariance
