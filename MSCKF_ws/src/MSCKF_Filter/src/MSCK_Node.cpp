@@ -1,4 +1,5 @@
 #include "MSCKF_Filter/MSCK_Node.h"
+#include <chrono>
 
 namespace MSCKalman {
 
@@ -7,7 +8,7 @@ MSCKF_Node::MSCKF_Node(const ros::NodeHandle& nh, const ros::NodeHandle& pnh)
     imu_sub = nh_.subscribe<sensor_msgs::Imu>("imu0", 1, &MSCKF_Node::imu_callback, this);
     ROS_INFO("Subscribe to IMU");
 
-    features_sub = nh_.subscribe("/features", 200, &MSCKF_Node::image_feature_callback, this);
+    features_sub = nh_.subscribe("/features", 1, &MSCKF_Node::image_feature_callback, this);
 
     odom_pub = nh_.advertise<nav_msgs::Odometry>("odom", 10);
 
@@ -46,22 +47,30 @@ void MSCKF_Node::imu_callback(const sensor_msgs::ImuConstPtr& msg) {
 }
 
 void MSCKF_Node::image_feature_callback(const MSCKF_Filter::ImageFeaturesConstPtr &msg) {
+    // Start timing
+    auto start_time = std::chrono::high_resolution_clock::now();
+
     // Implement your feature callback function here
-    if(filter.is_gravity_init){
-        //ROS_INFO("Image Received");
+    if (filter.is_gravity_init) {
+        // ROS_INFO("Image Received");
         filter.add_camera_frame(msg->image_seq);
         auto features = FeatureList{};
         for (const auto &f : msg->features) {
             features.push_back(ImageFeature{f.id, {f.position.x, f.position.y}, f.lifetime});
             // std::cout << "Num Features: " << features.size() << std::endl;
-            if (f.lifetime >= 4){
-            std::cout << "Feature ID: " << f.id << " Lifetime: " << f.lifetime << " frames" << std::endl;
+            if (f.lifetime >= 4) {
+            //    std::cout << "Feature ID: " << f.id << " Lifetime: " << f.lifetime << " frames" << std::endl;
             }
         }
         filter.add_features(msg->image_seq, features);
     }
     std::cout << "Feature Callback: " << msg->image_seq << std::endl;
     publish_odom();
+
+    // End timing
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+    std::cout << "Callback runtime: " << duration << " microseconds" << std::endl;
 }
 
 
