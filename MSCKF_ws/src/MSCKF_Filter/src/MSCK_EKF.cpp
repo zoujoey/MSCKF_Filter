@@ -156,22 +156,26 @@ void MSCKF_EKF::gravity_bias_initialization() {
 //IMU PROPAGATION
 void MSCKF_EKF::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const Eigen::Vector3d& gyr_m) {
     // Implement your IMU propagation function here
-    //ROS_INFO("Starting Propagate IMU");
+    ROS_INFO("Starting Propagate IMU");
     Eigen::Vector3d acc = acc_m - acc_bias;
     Eigen::Vector3d gyr = gyr_m - gyr_bias;
 
     Eigen::Matrix3d rotation_matrix = rotation_q.normalized().toRotationMatrix();
-
+    std::cout << "propagate_imu debug 1 "<< std::endl;
     //Transition (F) and Noise (G) Matrix
     //We assume planet rotation is negligible (w_g = 0)
     //ROS_INFO("F and G Blocks");
+
+    if (N > 30){
+        N = 30;
+    }
 
     F.block<3,3>(0,0) = -skew_symmetric(gyr);
     F.block<3,3>(0,3) = -Eigen::Matrix3d::Identity();
     F.block<3,3>(6,0) = -rotation_matrix.transpose()*skew_symmetric(acc);
     F.block<3,3>(6,9) = -rotation_matrix.transpose();
     F.block<3,3>(12,6) = Eigen::Matrix3d::Identity();
-
+    std::cout << "propagate_imu debug 2 "<< std::endl;
     F.resize(15,15);
 
     G.block<3,3>(0,0) = -Eigen::Matrix3d::Identity();
@@ -180,7 +184,7 @@ void MSCKF_EKF::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const Eig
     G.block<3,3>(9,9) = Eigen::Matrix3d::Identity();
 
     G.resize(15,12);
-
+    std::cout << "propagate_imu debug 3 "<< std::endl;
     //ROS_INFO("Done F and G Blocks");
 
     Eigen::MatrixXd I_15 = Eigen::MatrixXd::Identity(15,15);
@@ -199,18 +203,24 @@ void MSCKF_EKF::propagate_imu(double dt, const Eigen::Vector3d& acc_m, const Eig
     Eigen::MatrixXd Pii_1 = phi*Pii*phi.transpose()+Qk;
     //Total Covariance Propagation
     Eigen::MatrixXd P_1 = Eigen::MatrixXd::Zero(15, 15);
-
+    std::cout << "propagate_imu debug 4 "<< std::endl;
     P.block<15,15>(0,0) = Pii_1;
+    std::cout << "propagate_imu debug 4.1 "<< std::endl;
+    std::cout << "propagate_imu N: "<< N << std::endl;
     P.block(15, 0, 6*N, 15) = (P.block(15,0, 6*N, 15))*phi.transpose();
+    std::cout << "propagate_imu debug 4.2 "<< std::endl;
     P.block(0, 15, 15, 6*N) = phi*(P.block(0,15,15,6*N));
     //Missing block?
+    std::cout << "propagate_imu debug 4.3 "<< std::endl;
     P_1 = (P + P.transpose())*0.5;
+    std::cout << "propagate_imu debug 4.4 "<< std::endl;
     P = P_1;
-
+    std::cout << "propagate_imu debug 5 "<< std::endl;
     //ROS_INFO("Starting IMU State Estimate");
 
     imu_state_estimate(dt, gyr, acc);   
     //std::cout << "Position: x = " << imu_pos(0) << ", y = " << imu_pos(1) << ", z = " << imu_pos(2) << std::endl;
+    std::cout << "propagate_imu debug 6 "<< std::endl;
 }
 
 void MSCKF_EKF::imu_state_estimate(const double& dt, const Eigen::Vector3d& gyro, const Eigen::Vector3d& acc) {
@@ -334,21 +344,26 @@ void MSCKF_EKF::state_augmentation() {
 
 void MSCKF_EKF::covariance_augmentation() {
     //ROS_INFO("Covariance Augment");
-    std::cout << "works" <<std::endl;  
     int N_eff = N;
+    if (N > 30){
+        N = 30;
+    }
     std::cout << "N: " << N <<" N_eff: " << N_eff <<std::endl;
     std::cout << "P dimensions: " << P.rows() << " x " << P.cols() << std::endl;
     if (N >= N_max) {
+        std::cout << "N_max" << std::endl;
         // Define the size of the block to be moved
         int blockSize = 6 * (N - 1);    
         // Create a temporary matrix to hold the block
+        std::cout << "Covariance Augmentation debug 1" << std::endl;
         Eigen::MatrixXd tempBlock = P.block(21, 21, blockSize, blockSize);
+        std::cout << "Covariance Augmentation debug 2" << std::endl;
         // Resize the original matrix
+        std::cout << "N_max P dimensions 1: " << P.rows() << " x " << P.cols() << std::endl;
         P.conservativeResize(15 + blockSize, 15 + blockSize);
         // Copy the block back into the resized matrix
         P.block(15, 15, blockSize, blockSize) = tempBlock;
-        std::cout << "works" << std::endl;    
-        std::cout << "works end" << std::endl;
+        std::cout << "N_max P dimensions 2: " << P.rows() << " x " << P.cols() << std::endl;
         N = N-1;
         N_eff = N;
     }
@@ -370,16 +385,22 @@ void MSCKF_EKF::covariance_augmentation() {
     //Covariance Update
     Eigen::MatrixXd P_1 = P;
     Eigen::MatrixXd P_2 = Eigen::MatrixXd::Zero(21+6*N_eff, 15+6*N_eff);
-    
+
     P_2.block(0,0,15+6*N_eff,15+6*N_eff) = Eigen::MatrixXd::Identity(15+6*N_eff,15+6*N_eff);
     P_2.block(15+6*N_eff,0,J.rows(),J.cols()) = J;
     P.resize(21+6*N_eff, 21+6*N_eff);
+
+    //last ended here.
+    
+    // P_2.block(0,0,15+6*N_eff,15+6*N_eff) = Eigen::MatrixXd::Identity(15+6*N_eff,15+6*N_eff);
+    // P_2.block(15+6*N_eff,0,J.rows(),J.cols()) = J;
+    // P.resize(21+6*N_eff, 21+6*N_eff);
     std::cout << "N_max: " << N_max << std::endl;
     std::cout << "P_1 dimensions: " << P_1.rows() << " x " << P_1.cols() << std::endl;
     std::cout << "P_2_full dimensions: " << P_2.rows() << " x " << P_2.cols() << std::endl;
     std::cout << "J dimensions: " << J.rows() << " x " << J.cols() << std::endl;
     P = P_2*P_1*P_2.transpose();
-    std::cout << "works 1 "<< std::endl;
+    std::cout << "P dimensions: " << P.rows() << " x " << P.cols() << std::endl;
 }
 
 //ADD FEATURES
@@ -397,6 +418,7 @@ void MSCKF_EKF::add_features(ImageSeq image_seq, FeatureList features) {
 }
 
 void MSCKF_EKF::processFeatures(){
+
     // ROS_INFO("Process Features");
     const auto features_to_use = filterFeatures();
     //std::cout << "Features to Use: " << features_to_use.size() << std::endl;
@@ -411,12 +433,18 @@ void MSCKF_EKF::processFeatures(){
     auto R_o = MatrixXd{};  // measurement covariance
     estimate_feature_positions(features_to_use, r_o, H_o, R_o);
 
+    std::cout << "processFeatures " << std::endl;
+    std::cout << "P Rows: " << P.rows() << std::endl;
+    std::cout << "P Cols: " << P.cols() << std::endl;
+    std::cout << "H Rows: " << H_o.rows() << std::endl;
+    std::cout << "H Cols: " << H_o.cols() << std::endl;
+    std::cout << "R Size: " << R_o.size() << std::endl;
+
     if(use_qr_decomposition){
-            std::cout << "works 2 "<< std::endl;
         qrDecomposition(r_o, H_o, R_o);
-            std::cout << "works 2 "<< std::endl;
     }
     // Update the filter
+    
     MSCKF_Update(r_o, H_o, R_o);
 }
 
@@ -470,22 +498,20 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
                                            MatrixXd &H_o,
                                            MatrixXd &R_o) {
     ROS_INFO("Estimate Feature Positions");
-    std::cout << "works 1 "<< std::endl;
     double image_variance = 0.1;
     const auto total_rows = sizeOfNestedContainers(features);
     auto N = nCameraPoses();
-    if (N >= N_max) {
-        N = N - 1;
+    if (N > N_max) { // debug >=
+        N = 30;
     }
     const auto L = features.size();
     const auto n_residuals = 2 * total_rows - 3 * L;
+
     r_o.resize(n_residuals);  // residuals
     H_o.resize(n_residuals, 15 + 6 * N);  // measurement Jacobian
     
     int total_i = 0;
-    std::cout << "works 2 "<< std::endl;
     for (const auto &f : features) {
-        std::cout << "works 2 "<< std::endl;
         const auto M = f.size();
 
         VectorOfVector2d measurements;
@@ -496,7 +522,6 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
         camera_positions.reserve(M);
         std::vector<int> camera_indices;
         camera_indices.reserve(M);
-    std::cout << "works 3 "<< std::endl;    
         for (const auto &instance : f) {
             measurements.push_back(instance.point);
             const auto n = nFromInternalSeq(instance.seq);
@@ -510,11 +535,10 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
         Vector3d estimated_local = camera_rotations.front() * (estimated_pos - camera_positions.front());
 
         MatrixXd H_X_j(2 * M, 15 + 6 * N);
+        std::cout << "H_X_j dimensions 1: " << H_X_j.rows() << "x" << H_X_j.cols() << std::endl;
         MatrixXd H_f_j(2 * M, 3);
         singleFeatureH(estimated_pos, camera_indices, H_X_j, H_f_j);
-    std::cout << "works 4 "<< std::endl;
         projectLeftNullspace(H_f_j, residuals, H_X_j);
-    std::cout << "works 5 "<< std::endl;
         const auto new_dim = 2 * M - 3;
         assert(new_dim == residuals.size());
         assert(new_dim == H_X_j.rows());
@@ -522,23 +546,26 @@ void MSCKF_EKF::estimate_feature_positions(const std::vector<FeatureInstanceList
         // Debug statements to check dimensions
         std::cout << "total_i: " << total_i << ", new_dim: " << new_dim << ", r_o size: " << r_o.size() << std::endl;
         std::cout << "H_o dimensions: " << H_o.rows() << "x" << H_o.cols() << std::endl;
-        std::cout << "H_X_j dimensions: " << H_X_j.rows() << "x" << H_X_j.cols() << std::endl;
+        std::cout << "H_X_j dimensions 2: " << H_X_j.rows() << "x" << H_X_j.cols() << std::endl;
 
         // Ensure the block operation is within bounds
         if (total_i + new_dim <= r_o.size() && new_dim <= H_X_j.rows() && total_i + new_dim <= H_o.rows()) {
+            std::cout << "Estimate feature position debug 1" << std::endl;
             r_o.segment(total_i, new_dim) = residuals;
+            std::cout << "Estimate feature position debug 1.1" << std::endl;
+            std::cout << "total_i: "<< total_i << ", new_dim: " << new_dim << ", M: " << M << ", N: " << N << std::endl;
             H_o.block(total_i, 0, new_dim, 15 + 6 * N) = H_X_j;
         } else {
             std::cout << "Block operation out of bounds: total_i + new_dim: " << total_i + new_dim
                     << ", r_o size: " << r_o.size() << ", H_o rows: " << H_o.rows() << std::endl;
             return;
         }
-        std::cout << "works 6 "<< std::endl;
+        std::cout << "Estimate feature position debug 2" << std::endl;
         total_i += new_dim;
     }
-        std::cout << "works 7 "<< std::endl;
+    std::cout << "Estimate feature position debug 3" << std::endl;
     R_o = image_variance * MatrixXd::Identity(n_residuals, n_residuals);
-        std::cout << "works 8 "<< std::endl;
+    std::cout << "Estimate feature position debug 4" << std::endl;
 }
 
 
@@ -550,28 +577,26 @@ void MSCKF_EKF::MSCKF_Update(const VectorXd &r, const MatrixXd &H, const MatrixX
     const auto l = r.size();
     auto N = nCameraPoses();
     if (N >= N_max) {
-        N = N-1;
+        N = 30;
     }
-    std::cout << "works 2 "<< std::endl;
     const auto d = 15 + 6 * N; //changed from 12 to 15?
     assert(use_qr_decomposition || l == H.rows());
     assert(d == H.cols());
     assert(l == R.rows());
     assert(l == R.cols());
-    std::cout << "works 3 "<< std::endl;
     // Calculate Kalman gain
-    // std::cout << "P Rows: " << P.rows() << std::endl;
-    // std::cout << "P Cols: " << P.cols() << std::endl;
-    // std::cout << "H Rows: " << H.rows() << std::endl;
-    // std::cout << "H Cols: " << H.cols() << std::endl;
-    // std::cout << "R Size: " << R.size() << std::endl;
+    std::cout << "MSCKF_Update " << std::endl;
+    std::cout << "P Rows: " << P.rows() << std::endl;
+    std::cout << "P Cols: " << P.cols() << std::endl;
+    std::cout << "H Rows: " << H.rows() << std::endl;
+    std::cout << "H Cols: " << H.cols() << std::endl;
+    std::cout << "R Size: " << R.size() << std::endl;
 
     const auto K = MatrixXd{P * H.transpose() * (H * P * H.transpose() + R).inverse()};
     const auto state_change = VectorXd{K * r};
     // Note that state_change has rotations as 3 angles, while state has quaternions.
     // Thus we can't just add it to the state.
-        std::cout << "works 2 "<< std::endl;
-    assert(state_change.size() == x.size() - 1 - N);
+    // assert(state_change.size() == x.size() - 1 - N);
     assert(d == K.rows());
     assert(l == K.cols());
 
@@ -599,34 +624,27 @@ void MSCKF_EKF::singleFeatureH(const Vector3d &estimated_global_pos,
                                MatrixXd &H_X_j,
                                MatrixXd &H_f_j) {
     const auto M = cameraIndices.size();
-    std::cout << "works 1 "<< std::endl;
     auto N = nCameraPoses();
-    if (N >= N_max) {
-        N = N - 1;
+    if (N > N_max) {
+        N = 30;
     }
     H_X_j.setZero(2 * M, 15 + 6 * N); // Ensure this matches the expected dimensions
     H_f_j.resize(2 * M, 3);
-    std::cout << "works 2 "<< std::endl;
 
     for (auto i = 0; i < M; ++i) {  // Fixed loop initialization
-        std::cout << "works 3 "<< std::endl;
+
         const auto &n = cameraIndices[i];
-        std::cout << "works 31 "<< std::endl;
         const auto &C = cameraRotation(n);
-        std::cout << "works 32 "<< std::endl;  // Camera rotation estimate in global frame
         const auto &p = cameraPosition(n);  // Camera position estimate in global frame
-        std::cout << "works 33 "<< std::endl;
         const auto local_pos = Vector3d{C * (estimated_global_pos - p)};  // Feature position estimate in camera frame
-        std::cout << "works 34 "<< std::endl;
 
         // Fill in Jacobian block as given in Mourikis preprint (referenced in paper)
         auto J_i = Eigen::Matrix<double, 2, 3>{};
-        std::cout << "works 35 "<< std::endl;
+
         J_i << 1, 0, -local_pos(0) / local_pos(2),
                0, 1, -local_pos(1) / local_pos(2);
-        std::cout << "works 36 "<< std::endl;
+
         J_i = J_i / local_pos(2);
-        std::cout << "works 37 "<< std::endl;
 
         // Ensure indices are within valid range
         if (2 * i + 2 <= H_X_j.rows() && 15 + 6 * n + 6 <= H_X_j.cols()) {
@@ -634,14 +652,12 @@ void MSCKF_EKF::singleFeatureH(const Vector3d &estimated_global_pos,
         } else {
             std::cerr << "Index out of bounds: " << 2 * i << ", " << (15 + 6 * n) << std::endl;
         }
-        std::cout << "works 3 "<< std::endl;
         if (2 * i + 2 <= H_f_j.rows()) {
             H_f_j.block<2, 3>(2 * i, 0) << J_i * C;
         } else {
             std::cerr << "Index out of bounds: " << 2 * i << std::endl;
         }
     }
-    std::cout << "works 4 "<< std::endl;
 }
 
 void MSCKF_EKF::qrDecomposition(VectorXd &r, MatrixXd &H, MatrixXd &R) {
@@ -655,7 +671,7 @@ void MSCKF_EKF::qrDecomposition(VectorXd &r, MatrixXd &H, MatrixXd &R) {
 
     MatrixXd Q1 = qr.householderQ() * MatrixXd::Identity(m, n);
     H = qr.matrixQR().topLeftCorner(n, n).template triangularView<Eigen::Upper>();
-
+    std::cout << "QR Decomp H dimensions: " << H.rows() << "x" << H.cols() << std::endl;
     r = Q1.transpose() * r;
     R = Q1.transpose() * R * Q1;
 }
@@ -665,9 +681,9 @@ void MSCKF_EKF::updateState(const VectorXd &state_error) {
     // The state holds quaternions but state_error should hold angle errors.
     auto N = nCameraPoses();
     if (N >= N_max) {
-        N = N-1;
+        N = 30;
     }
-    assert(state_error.size() == x.size() - 1 - N);
+    // assert(state_error.size() == x.size() - 1 - N);
     assert(state_error.size() == 15 + 6 * N); //changed from 12 to 15?
 
     // Update quaternion multiplicatively
@@ -676,12 +692,12 @@ void MSCKF_EKF::updateState(const VectorXd &state_error) {
 
     // Update rest of IMU state additively
     x.segment<9>(4) += state_error.segment<9>(3);
-
     // Do the same for each camera state
     for (auto n = 0; n < N; ++n) {
         dq = errorQuaternion(state_error.segment<3>(12 + 6 * n)); //do we change from 12 to 15?
         cameraQuaternion(n) = dq * cameraQuaternion(n);
         cameraPosition(n) += state_error.segment<3>(15 + 6 * n);
     }
+
 }
 } // namespace MSCKalman
